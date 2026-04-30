@@ -45,3 +45,10 @@
 .pulse-dot {
   animation: pulse-dot 1.8s ease-in-out infinite;
 }
+
+@keyframes routeTravel {
+  0%   { top: 0;                  opacity: 0; }
+  12%  {                          opacity: 1; }
+  88%  {                          opacity: 1; }
+  100% { top: calc(100% - 8px);  opacity: 0; }
+}
