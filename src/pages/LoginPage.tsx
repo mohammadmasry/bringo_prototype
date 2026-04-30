@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-
-type Lang = 'de' | 'en'
+import LangToggle from '../components/LangToggle'
+import { useLang } from '../hooks/useLang'
 
 const translations = {
   de: {
@@ -48,28 +48,6 @@ function formatPhone(value: string): string {
   if (digits.length <= 3) return digits
   if (digits.length <= 7) return `${digits.slice(0, 3)} ${digits.slice(3)}`
   return `${digits.slice(0, 3)} ${digits.slice(3, 7)} ${digits.slice(7)}`
-}
-
-function LangToggle({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }) {
-  return (
-    <div className="flex items-center gap-0.5 bg-gray-100 rounded-full p-1">
-      {(['de', 'en'] as Lang[]).map((l) => (
-        <button
-          key={l}
-          onClick={() => setLang(l)}
-          className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all duration-200"
-          style={{
-            background: lang === l ? 'white' : 'transparent',
-            color: lang === l ? '#111827' : '#9ca3af',
-            boxShadow: lang === l ? '0 1px 4px rgba(0,0,0,0.1)' : 'none',
-          }}
-        >
-          <span>{l === 'de' ? '🇩🇪' : '🇬🇧'}</span>
-          <span className="uppercase">{l}</span>
-        </button>
-      ))}
-    </div>
-  )
 }
 
 function MockOrderCard({ activeLabel }: { activeLabel: string }) {
@@ -160,7 +138,7 @@ function FeaturePill({ icon, text }: { icon: React.ReactNode; text: string }) {
 }
 
 export default function LoginPage() {
-  const [lang, setLang] = useState<Lang>('de')
+  const { lang, setLang } = useLang()
   const [phone, setPhone] = useState('')
   const navigate = useNavigate()
 

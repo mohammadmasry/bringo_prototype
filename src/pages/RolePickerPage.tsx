@@ -1,8 +1,47 @@
 import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import BringoLogo from '../components/BringoLogo'
+import LangToggle from '../components/LangToggle'
+import { useLang } from '../hooks/useLang'
 
 type Role = 'courier' | 'customer'
+
+const tr = {
+  de: {
+    h1a: 'Wie möchtest du',
+    h1b: 'Bringo nutzen?',
+    subtitle: 'Wähle deine Rolle — du kannst die andere später hinzufügen.',
+    useDifferentNumber: 'Andere Nummer verwenden',
+    courierTitle: 'Studierender Kurier',
+    courierDesc: 'Nimm Lieferaufträge in deiner Nähe an und verdiene Geld nach deinem eigenen Plan. Perfekt neben dem Studium.',
+    courierBadge: 'Bis zu €603 / Monat',
+    courierFeatures: ['Flexible Zeiten — dein Plan', 'Minijob-freundlicher Verdienst', 'Verifizierte Studierenden-Community'],
+    customerTitle: 'Kunde',
+    customerDesc: 'Gib eine Lieferung auf — ein verifizierter Studierender in der Nähe holt sie ab und bringt sie direkt zu dir.',
+    customerBadge: 'Schnell & günstig',
+    customerFeatures: ['Live-Karten-Tracking', 'Verifizierte Kuriere', 'Direkter Telefonkontakt'],
+    selectLabel: 'Auswählen',
+    selectedLabel: 'Ausgewählt ✓',
+    continueAs: (role: string) => `Weiter als ${role}`,
+  },
+  en: {
+    h1a: 'How do you want to',
+    h1b: 'use Bringo?',
+    subtitle: 'Choose your role — you can always add the other one later.',
+    useDifferentNumber: 'Use a different number',
+    courierTitle: 'Student Courier',
+    courierDesc: 'Accept nearby delivery requests and earn money on your own schedule. Perfect alongside your studies.',
+    courierBadge: 'Up to €603 / month',
+    courierFeatures: ['Flexible hours — your schedule', 'Minijob-friendly earnings', 'Verified student community'],
+    customerTitle: 'Customer',
+    customerDesc: 'Post a delivery request — a nearby verified student picks it up and delivers it straight to you.',
+    customerBadge: 'Fast & affordable',
+    customerFeatures: ['Live map tracking', 'Verified, trusted couriers', 'Direct phone contact'],
+    selectLabel: 'Select',
+    selectedLabel: 'Selected ✓',
+    continueAs: (role: string) => `Continue as ${role}`,
+  },
+}
 
 interface RoleCardProps {
   role: Role
@@ -15,6 +54,8 @@ interface RoleCardProps {
   gradient: string
   glowColor: string
   icon: React.ReactNode
+  selectLabel: string
+  selectedLabel: string
 }
 
 function RoleCard({
@@ -27,6 +68,8 @@ function RoleCard({
   gradient,
   glowColor,
   icon,
+  selectLabel,
+  selectedLabel,
 }: RoleCardProps) {
   return (
     <div
@@ -92,7 +135,7 @@ function RoleCard({
         {/* Select row */}
         <div className="mt-auto flex items-center justify-between">
           <span className="text-sm font-semibold text-white/50">
-            {selected ? 'Selected ✓' : 'Select'}
+            {selected ? selectedLabel : selectLabel}
           </span>
           <div
             className="w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200"
@@ -123,8 +166,10 @@ export default function RolePickerPage() {
   const [selected, setSelected] = useState<Role | null>(null)
   const navigate = useNavigate()
   const location = useLocation()
-  const phone = (location.state as { phone?: string } | null)?.phone ?? '+49 ···'
+  const { lang, setLang } = useLang()
+  const t = tr[lang]
 
+  const phone = (location.state as { phone?: string } | null)?.phone ?? '+49 ···'
   const maskedPhone = phone.replace(/(\+49 \d{3})\d+(\d{3})/, '$1 ···$2')
 
   const handleContinue = () => {
@@ -136,12 +181,15 @@ export default function RolePickerPage() {
       {/* Navbar */}
       <nav className="flex items-center justify-between px-8 py-5 bg-white border-b border-gray-100/80">
         <BringoLogo />
-        <button
-          onClick={() => navigate('/')}
-          className="text-sm text-gray-400 hover:text-gray-600 font-medium transition-colors"
-        >
-          Use a different number
-        </button>
+        <div className="flex items-center gap-4">
+          <LangToggle lang={lang} setLang={setLang} />
+          <button
+            onClick={() => navigate('/')}
+            className="text-sm text-gray-400 hover:text-gray-600 font-medium transition-colors"
+          >
+            {t.useDifferentNumber}
+          </button>
+        </div>
       </nav>
 
       {/* Content */}
@@ -164,13 +212,11 @@ export default function RolePickerPage() {
             </div>
 
             <h1 className="text-4xl font-black text-gray-900 leading-tight mb-3">
-              How do you want to
+              {t.h1a}
               <br />
-              <span className="gradient-text">use Bringo?</span>
+              <span className="gradient-text">{t.h1b}</span>
             </h1>
-            <p className="text-gray-400 text-base">
-              Choose your role — you can always add the other one later.
-            </p>
+            <p className="text-gray-400 text-base">{t.subtitle}</p>
           </div>
 
           {/* Cards */}
@@ -179,10 +225,12 @@ export default function RolePickerPage() {
               role="courier"
               selected={selected === 'courier'}
               onClick={() => setSelected('courier')}
-              title="Student Courier"
-              description="Accept nearby delivery requests and earn money on your own schedule. Perfect alongside your studies."
-              badge="Up to €603 / month"
-              features={['Flexible hours — your schedule', 'Minijob-friendly earnings', 'Verified student community']}
+              title={t.courierTitle}
+              description={t.courierDesc}
+              badge={t.courierBadge}
+              features={t.courierFeatures}
+              selectLabel={t.selectLabel}
+              selectedLabel={t.selectedLabel}
               gradient="linear-gradient(145deg, #14532d 0%, #166534 45%, #16a34a 100%)"
               glowColor="rgba(22,163,74,0.3)"
               icon={
@@ -196,10 +244,12 @@ export default function RolePickerPage() {
               role="customer"
               selected={selected === 'customer'}
               onClick={() => setSelected('customer')}
-              title="Customer"
-              description="Post a delivery request — a nearby verified student picks it up and delivers it straight to you."
-              badge="Fast &amp; affordable"
-              features={['Live map tracking', 'Verified, trusted couriers', 'Direct phone contact']}
+              title={t.customerTitle}
+              description={t.customerDesc}
+              badge={t.customerBadge}
+              features={t.customerFeatures}
+              selectLabel={t.selectLabel}
+              selectedLabel={t.selectedLabel}
               gradient="linear-gradient(145deg, #0f172a 0%, #1e293b 50%, #334155 100%)"
               glowColor="rgba(15,23,42,0.35)"
               icon={
@@ -231,7 +281,7 @@ export default function RolePickerPage() {
                       : '0 6px 24px rgba(15,23,42,0.4)',
                 }}
               >
-                Continue as {selected === 'courier' ? 'Student Courier' : 'Customer'}
+                {t.continueAs(selected === 'courier' ? t.courierTitle : t.customerTitle)}
                 <svg
                   className="w-4 h-4 transition-transform group-hover:translate-x-0.5"
                   fill="none"
