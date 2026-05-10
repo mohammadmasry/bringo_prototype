@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useLang } from '../hooks/useLang'
-
-type Status = 'searching' | 'found' | 'picked_up' | 'delivered'
+import { getSession } from '../lib/session'
+import { getActiveOrder, setActiveOrder, addToHistory, type StoredOrder } from '../lib/orderStore'
 
 const MOCK_COURIER = { name: 'Jonas M.', rating: 4.9, phone: '+49 151 234 56789', eta: '~12 min' }
 
@@ -12,64 +12,100 @@ const tr = {
     searchingSub: 'Verifizierte Studierende in deiner Nähe werden benachrichtigt.',
     found: 'Kurier gefunden!',
     foundSub: 'Dein Kurier ist unterwegs zur Abholung.',
+    heading_to_pickup: 'Kurier auf dem Weg',
+    heading_to_pickupSub: 'Dein Kurier fährt zum Abholort.',
     picked_up: 'Abgeholt!',
-    picked_upSub: 'Dein Kurier hat dein Paket und ist auf dem Weg.',
+    picked_upSub: 'Dein Kurier hat das Paket und ist auf dem Weg zu dir.',
     delivered: 'Geliefert!',
     deliveredSub: 'Dein Paket wurde erfolgreich zugestellt. Danke, dass du Bringo nutzt!',
     eta: 'Geschätzte Ankunft',
     pickup: 'Abholung', dropoff: 'Zielort',
-    markPickedUp: 'Abholung bestätigen',
-    markDelivered: 'Zustellung bestätigen',
     cancelOrder: 'Auftrag stornieren',
     backHome: 'Zurück zur Startseite',
     orderRef: 'Auftrag',
+    waitingForCourier: 'Warten auf Kurier…',
   },
   en: {
     searching: 'Finding your courier…',
     searchingSub: 'Verified students nearby are being notified.',
     found: 'Courier found!',
     foundSub: 'Your courier is heading to pick up your item.',
+    heading_to_pickup: 'Courier on the way',
+    heading_to_pickupSub: 'Your courier is heading to the pickup location.',
     picked_up: 'Picked up!',
-    picked_upSub: 'Your courier has your item and is on the way.',
+    picked_upSub: 'Your courier has your item and is on the way to you.',
     delivered: 'Delivered!',
     deliveredSub: 'Your item was successfully delivered. Thanks for using Bringo!',
     eta: 'ETA',
     pickup: 'Pickup', dropoff: 'Dropoff',
-    markPickedUp: 'Confirm pickup',
-    markDelivered: 'Confirm delivery',
     cancelOrder: 'Cancel order',
     backHome: 'Back to home',
     orderRef: 'Order',
+    waitingForCourier: 'Waiting for courier…',
   },
 }
 
-interface Order {
-  id: string
-  pickup: string
-  dropoff: string
-  description: string
-  size: 'S' | 'M' | 'L'
-  price: number
-}
+type Status = StoredOrder['status']
 
 export default function CustomerActiveOrderPage() {
-  const [status, setStatus] = useState<Status>('searching')
   const navigate = useNavigate()
   const location = useLocation()
   const { lang } = useLang()
   const t = tr[lang]
-  const state = (location.state as { firstName?: string; order?: Order } | null) ?? {}
-  const { firstName = '', order } = state
+  const { firstName = '' } = (location.state as { firstName?: string } | null) ?? getSession()
 
+  const [order, setOrder] = useState<StoredOrder | null>(() => getActiveOrder())
+  const [status, setStatus] = useState<Status>(() => getActiveOrder()?.status ?? 'searching')
+
+  // Redirect if no order exists
   useEffect(() => {
-    if (!order) navigate('/home/customer')
-  }, [order, navigate])
+    if (!getActiveOrder()) navigate('/home/customer', { replace: true, state: { firstName } })
+  }, [firstName, navigate])
 
+  // Auto-progress searching → found after 2.5 s and write to store
   useEffect(() => {
     if (status !== 'searching') return
-    const id = setTimeout(() => setStatus('found'), 2500)
+    const id = setTimeout(() => {
+      const current = getActiveOrder()
+      if (!current) return
+      const updated = { ...current, status: 'found' as const }
+      setActiveOrder(updated)
+      setOrder(updated)
+      setStatus('found')
+    }, 2500)
     return () => clearTimeout(id)
   }, [status])
+
+  // Poll orderStore for courier-driven status updates
+  useEffect(() => {
+    if (status === 'delivered') return
+    const tick = () => {
+      const current = getActiveOrder()
+      if (!current) { navigate('/home/customer', { replace: true, state: { firstName } }); return }
+      if (current.status !== status) { setOrder(current); setStatus(current.status) }
+    }
+    const id = setInterval(tick, 1500)
+    return () => clearInterval(id)
+  }, [status, navigate, firstName])
+
+  // Two-tab sync via storage event (courier on another tab)
+  useEffect(() => {
+    const handler = () => {
+      const current = getActiveOrder()
+      if (!current) { navigate('/home/customer', { replace: true, state: { firstName } }); return }
+      setOrder(current)
+      setStatus(current.status)
+    }
+    window.addEventListener('storage', handler)
+    return () => window.removeEventListener('storage', handler)
+  }, [navigate, firstName])
+
+  // When delivered, add to history and clear active order
+  useEffect(() => {
+    if (status !== 'delivered' || !order) return
+    addToHistory(order)
+    setActiveOrder(null)
+  }, [status, order])
 
   if (!order) return null
 
@@ -97,17 +133,13 @@ export default function CustomerActiveOrderPage() {
     )
   }
 
-  const statusColor =
-    status === 'searching'
-      ? { bg: '#fef9c3', text: '#854d0e' }
-      : status === 'found'
-      ? { bg: '#f0fdf4', text: '#15803d' }
-      : { bg: '#dbeafe', text: '#1d4ed8' }
-
-  const statusLabel =
-    status === 'searching' ? t.searching : status === 'found' ? t.found : t.picked_up
-  const statusSub =
-    status === 'searching' ? t.searchingSub : status === 'found' ? t.foundSub : t.picked_upSub
+  const statusMeta: Record<Exclude<Status, 'delivered'>, { label: string; sub: string; bg: string; color: string }> = {
+    searching:        { label: t.searching,        sub: t.searchingSub,        bg: '#fef9c3', color: '#854d0e' },
+    found:            { label: t.found,            sub: t.foundSub,            bg: '#f0fdf4', color: '#15803d' },
+    heading_to_pickup:{ label: t.heading_to_pickup, sub: t.heading_to_pickupSub, bg: '#f0fdf4', color: '#15803d' },
+    picked_up:        { label: t.picked_up,        sub: t.picked_upSub,        bg: '#dbeafe', color: '#1d4ed8' },
+  }
+  const meta = statusMeta[status as Exclude<Status, 'delivered'>]
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: '#f8fafc' }}>
@@ -116,18 +148,18 @@ export default function CustomerActiveOrderPage() {
           <div className="flex items-center justify-between mb-3">
             <div
               className="inline-flex items-center gap-2 rounded-full px-3 py-1.5"
-              style={{ background: statusColor.bg, color: statusColor.text }}
+              style={{ background: meta.bg, color: meta.color }}
             >
               {status === 'searching' ? (
                 <div className="w-3 h-3 rounded-full border-2 border-yellow-600 border-t-transparent animate-spin" />
               ) : (
                 <span className="w-2 h-2 rounded-full bg-current pulse-dot" />
               )}
-              <span className="text-xs font-semibold">{statusLabel}</span>
+              <span className="text-xs font-semibold">{meta.label}</span>
             </div>
             <span className="text-xs text-gray-400">{t.orderRef} #{order.id}</span>
           </div>
-          <p className="text-sm text-gray-400">{statusSub}</p>
+          <p className="text-sm text-gray-400">{meta.sub}</p>
         </div>
       </div>
 
@@ -137,7 +169,7 @@ export default function CustomerActiveOrderPage() {
           <div className="flex gap-3">
             <div className="flex flex-col items-center pt-0.5 shrink-0">
               <div className="relative" style={{ width: 12, height: 12 }}>
-                {status === 'found' && (
+                {(status === 'found' || status === 'heading_to_pickup') && (
                   <div className="absolute inset-0 rounded-full bg-green-400/40 animate-ping" />
                 )}
                 <div
@@ -174,7 +206,7 @@ export default function CustomerActiveOrderPage() {
           </div>
         </div>
 
-        {/* Courier card */}
+        {/* Courier card — shown once courier is found */}
         {status !== 'searching' && (
           <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm mb-4 animate-fade-in-up">
             <div className="flex items-center gap-4">
@@ -207,41 +239,15 @@ export default function CustomerActiveOrderPage() {
           </div>
         )}
 
-        {/* Action buttons */}
-        <div className="space-y-3">
-          {status === 'found' && (
-            <>
-              <button
-                onClick={() => setStatus('picked_up')}
-                className="w-full py-4 rounded-xl font-semibold text-white flex items-center justify-center gap-2 transition-all"
-                style={{ background: 'linear-gradient(135deg, #16a34a, #15803d)', boxShadow: '0 4px 16px rgba(22,163,74,0.35)' }}
-              >
-                {t.markPickedUp}
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-              </button>
-              <button
-                onClick={() => navigate('/home/customer', { state: { firstName } })}
-                className="w-full py-3.5 rounded-xl font-semibold text-sm text-red-500 hover:bg-red-50 transition-colors"
-              >
-                {t.cancelOrder}
-              </button>
-            </>
-          )}
-          {status === 'picked_up' && (
-            <button
-              onClick={() => setStatus('delivered')}
-              className="w-full py-4 rounded-xl font-semibold text-white flex items-center justify-center gap-2 transition-all"
-              style={{ background: 'linear-gradient(135deg, #16a34a, #15803d)', boxShadow: '0 4px 16px rgba(22,163,74,0.35)' }}
-            >
-              {t.markDelivered}
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-            </button>
-          )}
-        </div>
+        {/* Cancel — only while still searching */}
+        {status === 'searching' && (
+          <button
+            onClick={() => { setActiveOrder(null); navigate('/home/customer', { state: { firstName } }) }}
+            className="w-full py-3.5 rounded-xl font-semibold text-sm text-red-500 hover:bg-red-50 transition-colors"
+          >
+            {t.cancelOrder}
+          </button>
+        )}
       </div>
     </div>
   )

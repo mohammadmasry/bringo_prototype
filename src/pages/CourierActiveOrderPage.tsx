@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useLang } from '../hooks/useLang'
+import { getSession } from '../lib/session'
+import { getActiveOrder, setActiveOrder, addToHistory } from '../lib/orderStore'
 
 type Status = 'heading_to_pickup' | 'picked_up' | 'delivered'
 
@@ -13,7 +15,7 @@ const tr = {
     delivered: 'Geliefert!',
     deliveredSub: 'Auftrag erfolgreich abgeschlossen.',
     pickup: 'Abholung', dropoff: 'Zielort',
-    item: 'Artikel', size: 'Größe', earnings: 'Verdienst',
+    item: 'Artikel', earnings: 'Verdienst',
     markPickedUp: 'Abgeholt',
     markDelivered: 'Zugestellt',
     backToOrders: 'Zurück zu den Aufträgen',
@@ -29,7 +31,7 @@ const tr = {
     delivered: 'Delivered!',
     deliveredSub: 'Order successfully completed.',
     pickup: 'Pickup', dropoff: 'Dropoff',
-    item: 'Item', size: 'Size', earnings: 'Earnings',
+    item: 'Item', earnings: 'Earnings',
     markPickedUp: 'Mark as picked up',
     markDelivered: 'Mark as delivered',
     backToOrders: 'Back to orders',
@@ -49,7 +51,8 @@ interface Order {
   id: string
   pickup: string
   dropoff: string
-  item: string
+  item?: string
+  description?: string
   size: 'S' | 'M' | 'L'
   price: number
 }
@@ -60,14 +63,36 @@ export default function CourierActiveOrderPage() {
   const location = useLocation()
   const { lang } = useLang()
   const t = tr[lang]
-  const state = (location.state as { firstName?: string; order?: Order } | null) ?? {}
-  const { firstName = 'there', order } = state
+  const { firstName = 'there' } = (location.state as { firstName?: string } | null) ?? getSession()
+  const order = (location.state as { order?: Order } | null)?.order
 
   useEffect(() => {
-    if (!order) navigate('/home/courier')
+    if (!order) navigate('/home/courier', { replace: true })
   }, [order, navigate])
 
   if (!order) return null
+
+  const itemLabel = order.item ?? order.description ?? '—'
+  const sc = SIZE_COLORS[order.size] ?? SIZE_COLORS.M
+  const sizeLabel = order.size === 'S' ? t.small : order.size === 'M' ? t.medium : t.large
+
+  const handlePickedUp = () => {
+    const stored = getActiveOrder()
+    if (stored?.id === order.id) setActiveOrder({ ...stored, status: 'picked_up' })
+    setStatus('picked_up')
+  }
+
+  const handleDelivered = () => {
+    const stored = getActiveOrder()
+    if (stored?.id === order.id) { addToHistory(stored); setActiveOrder(null) }
+    setStatus('delivered')
+  }
+
+  const handleCancel = () => {
+    const stored = getActiveOrder()
+    if (stored?.id === order.id) setActiveOrder(null)
+    navigate('/home/courier', { state: { firstName } })
+  }
 
   if (status === 'delivered') {
     return (
@@ -94,8 +119,6 @@ export default function CourierActiveOrderPage() {
     )
   }
 
-  const sc = SIZE_COLORS[order.size] ?? SIZE_COLORS.M
-  const sizeLabel = order.size === 'S' ? t.small : order.size === 'M' ? t.medium : t.large
   const statusLabel = status === 'heading_to_pickup' ? t.heading_to_pickup : t.picked_up
   const statusSub = status === 'heading_to_pickup' ? t.heading_to_pickupSub : t.picked_upSub
 
@@ -118,7 +141,6 @@ export default function CourierActiveOrderPage() {
       </div>
 
       <div className="flex-1 px-6 py-5 max-w-lg mx-auto w-full">
-        {/* Route card */}
         <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm mb-4">
           <div className="flex gap-3 mb-5">
             <div className="flex flex-col items-center pt-0.5 shrink-0">
@@ -160,13 +182,10 @@ export default function CourierActiveOrderPage() {
           <div className="flex items-center justify-between pt-4 border-t border-gray-100">
             <div className="flex-1">
               <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold mb-0.5">{t.item}</p>
-              <p className="text-sm font-medium text-gray-900">{order.item}</p>
+              <p className="text-sm font-medium text-gray-900">{itemLabel}</p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <span
-                className="text-xs font-bold px-2.5 py-1 rounded-full"
-                style={{ background: sc.bg, color: sc.text }}
-              >
+              <span className="text-xs font-bold px-2.5 py-1 rounded-full" style={{ background: sc.bg, color: sc.text }}>
                 {sizeLabel}
               </span>
               <span className="text-lg font-black text-green-600">€{order.price.toFixed(2)}</span>
@@ -174,12 +193,11 @@ export default function CourierActiveOrderPage() {
           </div>
         </div>
 
-        {/* Action buttons */}
         <div className="space-y-3">
           {status === 'heading_to_pickup' && (
             <>
               <button
-                onClick={() => setStatus('picked_up')}
+                onClick={handlePickedUp}
                 className="w-full py-4 rounded-xl font-semibold text-white flex items-center justify-center gap-2 transition-all"
                 style={{ background: 'linear-gradient(135deg, #16a34a, #15803d)', boxShadow: '0 4px 16px rgba(22,163,74,0.35)' }}
               >
@@ -188,17 +206,14 @@ export default function CourierActiveOrderPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
               </button>
-              <button
-                onClick={() => navigate('/home/courier', { state: { firstName } })}
-                className="w-full py-3.5 rounded-xl font-semibold text-sm text-red-500 hover:bg-red-50 transition-colors"
-              >
+              <button onClick={handleCancel} className="w-full py-3.5 rounded-xl font-semibold text-sm text-red-500 hover:bg-red-50 transition-colors">
                 {t.cancelOrder}
               </button>
             </>
           )}
           {status === 'picked_up' && (
             <button
-              onClick={() => setStatus('delivered')}
+              onClick={handleDelivered}
               className="w-full py-4 rounded-xl font-semibold text-white flex items-center justify-center gap-2 transition-all"
               style={{ background: 'linear-gradient(135deg, #16a34a, #15803d)', boxShadow: '0 4px 16px rgba(22,163,74,0.35)' }}
             >

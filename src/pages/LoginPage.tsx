@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import LangToggle from '../components/LangToggle'
 import { useLang } from '../hooks/useLang'
+import { clearSession } from '../lib/session'
 
 const translations = {
   de: {
@@ -138,9 +139,11 @@ function FeaturePill({ icon, text }: { icon: React.ReactNode; text: string }) {
 }
 
 export default function LoginPage() {
-  const { lang, setLang } = useLang()
+  const { lang } = useLang()
   const [phone, setPhone] = useState('')
   const navigate = useNavigate()
+
+  useEffect(() => { clearSession() }, [])
 
   const tr = translations[lang]
   const digits = phone.replace(/\s/g, '')
@@ -249,7 +252,7 @@ export default function LoginPage() {
           </div>
           {/* Spacer on desktop so toggle goes to the right */}
           <div className="hidden md:block" />
-          <LangToggle lang={lang} setLang={setLang} />
+          <LangToggle />
         </div>
 
         {/* Form */}

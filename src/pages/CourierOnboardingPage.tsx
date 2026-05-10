@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import BringoLogo from '../components/BringoLogo'
 import LangToggle from '../components/LangToggle'
 import { useLang } from '../hooks/useLang'
+import { setSession } from '../lib/session'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -145,7 +146,7 @@ export default function CourierOnboardingPage() {
   const [dob, setDob] = useState('')
   const [email, setEmail] = useState('')
   const navigate = useNavigate()
-  const { lang, setLang } = useLang()
+  const { lang } = useLang()
   const t = tr[lang]
 
   const canContinue =
@@ -173,7 +174,7 @@ export default function CourierOnboardingPage() {
         <h1 className="text-4xl font-black text-gray-900 mb-3">{t.s4Title}</h1>
         <p className="text-gray-400 leading-relaxed mb-2 max-w-xs">{t.s4Sub}</p>
         <p className="text-gray-300 text-sm leading-relaxed mb-10 max-w-xs">{t.s4Note}</p>
-        <button onClick={() => navigate('/home/courier', { state: { firstName } })}
+        <button onClick={() => { setSession({ firstName, role: 'courier' }); navigate('/home/courier', { state: { firstName } }) }}
           className="px-8 py-4 rounded-xl font-semibold text-white flex items-center gap-2 group transition-all"
           style={{ background: 'linear-gradient(135deg, #16a34a, #15803d)', boxShadow: '0 4px 16px rgba(22,163,74,0.35)' }}>
           {t.s4Btn}
@@ -193,7 +194,7 @@ export default function CourierOnboardingPage() {
         <div className="flex-1" />
         <BringoLogo />
         <div className="flex-1" />
-        <LangToggle lang={lang} setLang={setLang} />
+        <LangToggle />
       </div>
 
       <div className="flex-1 flex flex-col px-6 max-w-lg mx-auto w-full pb-10">

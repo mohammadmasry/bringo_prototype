@@ -3,8 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from 'firebase/auth'
 import { auth } from '../lib/firebase'
 import BringoLogo from '../components/BringoLogo'
-
-type Lang = 'de' | 'en'
+import { useLang } from '../hooks/useLang'
 
 const tr = {
   de: {
@@ -126,9 +125,9 @@ export default function OtpPage() {
   const [confirmation, setConfirmation] = useState<ConfirmationResult | null>(null)
   const navigate = useNavigate()
   const location = useLocation()
-  const state = (location.state as { phone?: string; lang?: Lang } | null) ?? {}
+  const { lang } = useLang()
+  const state = (location.state as { phone?: string } | null) ?? {}
   const phone = state.phone ?? ''
-  const lang: Lang = state.lang ?? 'de'
   const t = tr[lang]
 
   // redirect if no phone

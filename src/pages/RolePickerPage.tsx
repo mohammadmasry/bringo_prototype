@@ -166,7 +166,7 @@ export default function RolePickerPage() {
   const [selected, setSelected] = useState<Role | null>(null)
   const navigate = useNavigate()
   const location = useLocation()
-  const { lang, setLang } = useLang()
+  const { lang } = useLang()
   const t = tr[lang]
 
   const phone = (location.state as { phone?: string } | null)?.phone ?? '+49 ···'
@@ -182,7 +182,7 @@ export default function RolePickerPage() {
       <nav className="flex items-center justify-between px-8 py-5 bg-white border-b border-gray-100/80">
         <BringoLogo />
         <div className="flex items-center gap-4">
-          <LangToggle lang={lang} setLang={setLang} />
+          <LangToggle />
           <button
             onClick={() => navigate('/')}
             className="text-sm text-gray-400 hover:text-gray-600 font-medium transition-colors"

@@ -3,6 +3,8 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import BringoLogo from '../components/BringoLogo'
 import LangToggle from '../components/LangToggle'
 import { useLang } from '../hooks/useLang'
+import { getSession } from '../lib/session'
+import { setActiveOrder } from '../lib/orderStore'
 
 const PICKUP_PRESETS = [
   'CAMPUS Pfarrkirchen, Petersbogen 1',
@@ -80,9 +82,9 @@ export default function CreateDeliveryPage() {
   const [note, setNote] = useState('')
   const navigate = useNavigate()
   const location = useLocation()
-  const { lang, setLang } = useLang()
+  const { lang } = useLang()
   const t = tr[lang]
-  const { firstName = '' } = (location.state as { firstName?: string } | null) ?? {}
+  const { firstName = '' } = (location.state as { firstName?: string } | null) ?? getSession()
 
   const canContinue =
     step === 1 ? pickup.trim().length >= 5
@@ -95,9 +97,9 @@ export default function CreateDeliveryPage() {
       setStep((s) => s + 1)
     } else {
       const orderId = Math.random().toString(36).slice(2, 8).toUpperCase()
-      navigate('/active-order', {
-        state: { firstName, order: { id: orderId, pickup, dropoff, description, size, note, price: PRICES[size] } },
-      })
+      const order = { id: orderId, pickup, dropoff, description, size, note, price: PRICES[size], status: 'searching' as const }
+      setActiveOrder(order)
+      navigate('/active-order', { state: { firstName } })
     }
   }
 
@@ -120,7 +122,7 @@ export default function CreateDeliveryPage() {
         <div className="flex-1" />
         <BringoLogo />
         <div className="flex-1" />
-        <LangToggle lang={lang} setLang={setLang} />
+        <LangToggle />
       </div>
 
       <div className="flex-1 flex flex-col px-6 max-w-lg mx-auto w-full pb-10 pt-8">

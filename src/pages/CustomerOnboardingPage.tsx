@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import BringoLogo from '../components/BringoLogo'
 import LangToggle from '../components/LangToggle'
 import { useLang } from '../hooks/useLang'
+import { setSession } from '../lib/session'
 
 const tr = {
   de: {
@@ -26,13 +27,16 @@ const tr = {
 export default function CustomerOnboardingPage() {
   const [firstName, setFirstName] = useState('')
   const navigate = useNavigate()
-  const { lang, setLang } = useLang()
+  const { lang } = useLang()
   const t = tr[lang]
 
   const isValid = firstName.trim().length >= 2
 
   const handleContinue = () => {
-    if (isValid) navigate('/home/customer', { state: { firstName: firstName.trim() } })
+    if (!isValid) return
+    const name = firstName.trim()
+    setSession({ firstName: name, role: 'customer' })
+    navigate('/home/customer', { state: { firstName: name } })
   }
 
   return (
@@ -48,7 +52,7 @@ export default function CustomerOnboardingPage() {
         <div className="flex-1" />
         <BringoLogo />
         <div className="flex-1" />
-        <LangToggle lang={lang} setLang={setLang} />
+        <LangToggle />
       </div>
 
       <div className="flex-1 flex flex-col items-center justify-center px-6 -mt-12">

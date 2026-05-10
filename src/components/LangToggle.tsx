@@ -1,12 +1,7 @@
-import type { Lang } from '../hooks/useLang'
+import { useLang, type Lang } from '../hooks/useLang'
 
-export default function LangToggle({
-  lang,
-  setLang,
-}: {
-  lang: Lang
-  setLang: (l: Lang) => void
-}) {
+export default function LangToggle() {
+  const { lang, setLang } = useLang()
   return (
     <div className="flex items-center gap-0.5 bg-gray-100 rounded-full p-1 shrink-0">
       {(['de', 'en'] as Lang[]).map((l) => (
