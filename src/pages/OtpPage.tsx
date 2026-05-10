@@ -159,6 +159,7 @@ export default function OtpPage() {
       return
     }
     try {
+      if (!auth) { setError(t.errSend); setSending(false); return }
       const container = document.getElementById('recaptcha-container')
       if (container) container.innerHTML = ''
       const verifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
