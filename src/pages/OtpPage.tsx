@@ -114,6 +114,8 @@ function OtpBoxes({
   )
 }
 
+const isMock = !import.meta.env.VITE_FIREBASE_API_KEY || import.meta.env.VITE_FIREBASE_API_KEY === 'your_api_key_here'
+
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function OtpPage() {
   const [code, setCode] = useState('')
@@ -151,11 +153,14 @@ export default function OtpPage() {
   const sendOtp = async () => {
     setSending(true)
     setError('')
+    if (isMock) {
+      await new Promise((r) => setTimeout(r, 1200))
+      setSending(false)
+      return
+    }
     try {
-      // Clear previous reCAPTCHA widget if any
       const container = document.getElementById('recaptcha-container')
       if (container) container.innerHTML = ''
-
       const verifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
         size: 'invisible',
       })
@@ -169,7 +174,12 @@ export default function OtpPage() {
   }
 
   const handleVerify = async () => {
-    if (code.length !== 6 || !confirmation || loading) return
+    if (code.length !== 6 || loading) return
+    if (isMock) {
+      navigate('/welcome', { state: { phone, lang } })
+      return
+    }
+    if (!confirmation) return
     setLoading(true)
     setError('')
     try {
@@ -229,7 +239,15 @@ export default function OtpPage() {
           </div>
 
           <h1 className="text-3xl font-black text-gray-900 mb-2">{t.title}</h1>
-          <p className="text-gray-400 text-sm leading-relaxed mb-8">{t.subtitle(phone)}</p>
+          <p className="text-gray-400 text-sm leading-relaxed mb-4">{t.subtitle(phone)}</p>
+          {isMock && (
+            <div className="inline-flex items-center gap-1.5 bg-amber-50 border border-amber-100 rounded-full px-3 py-1.5 mb-4">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+              <span className="text-xs font-semibold text-amber-700">
+                {lang === 'de' ? 'Demo-Modus — beliebiger 6-stelliger Code' : 'Demo mode — any 6-digit code works'}
+              </span>
+            </div>
+          )}
 
           {sending ? (
             <div className="flex items-center justify-center gap-2 text-gray-400 py-4">

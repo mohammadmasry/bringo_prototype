@@ -1,5 +1,4 @@
-import { useState } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import LangToggle from '../components/LangToggle'
 import { useLang } from '../hooks/useLang'
 
@@ -15,10 +14,6 @@ const tr = {
     areaLabel: 'Gebiet', deliveryLabel: 'Ø Lieferzeit',
     ordersTitle: 'Deine Aufträge',
     emptyTitle: 'Noch keine Aufträge', emptySub: 'Deine Lieferungen werden hier angezeigt',
-    modalTitle: 'Lieferung erstellen',
-    modalSub: 'Dieses Feature kommt in der nächsten Iteration.',
-    pickup: 'Abholung', dropoff: 'Zielort',
-    comingSoon: 'Demnächst verfügbar',
   },
   en: {
     greet: (name: string) => {
@@ -31,17 +26,13 @@ const tr = {
     areaLabel: 'Area', deliveryLabel: 'Avg. delivery',
     ordersTitle: 'Your orders',
     emptyTitle: 'No orders yet', emptySub: 'Your deliveries will appear here',
-    modalTitle: 'Create a delivery',
-    modalSub: 'This feature is coming in the next iteration.',
-    pickup: 'Pickup', dropoff: 'Dropoff',
-    comingSoon: 'Coming soon',
   },
 }
 
 export default function CustomerHomePage() {
   const location = useLocation()
+  const navigate = useNavigate()
   const { firstName = 'there' } = (location.state as { firstName?: string } | null) ?? {}
-  const [showModal, setShowModal] = useState(false)
   const { lang, setLang } = useLang()
   const t = tr[lang]
 
@@ -65,7 +56,7 @@ export default function CustomerHomePage() {
 
       <div className="flex-1 px-6 py-6 max-w-lg mx-auto w-full">
         {/* Main CTA */}
-        <button onClick={() => setShowModal(true)}
+        <button onClick={() => navigate('/create-delivery', { state: { firstName } })}
           className="w-full text-left rounded-2xl p-6 mb-4 group transition-all duration-200 hover:shadow-lg active:scale-[0.99]"
           style={{ background: 'linear-gradient(135deg, #14532d 0%, #166534 50%, #16a34a 100%)' }}>
           <div className="flex items-start justify-between mb-8">
@@ -121,32 +112,6 @@ export default function CustomerHomePage() {
         </div>
       </div>
 
-      {/* Create Order Modal */}
-      {showModal && (
-        <div className="fixed inset-0 flex items-end justify-center z-50 px-4 pb-4"
-          style={{ background: 'rgba(0,0,0,0.4)' }} onClick={() => setShowModal(false)}>
-          <div className="bg-white rounded-2xl w-full max-w-lg p-6 animate-fade-in-up"
-            onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-xl font-black text-gray-900 mb-1">{t.modalTitle}</h2>
-            <p className="text-gray-400 text-sm mb-5">{t.modalSub}</p>
-            <div className="space-y-3 mb-5">
-              <div className="p-4 rounded-xl bg-gray-50 border border-gray-100">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">{t.pickup}</p>
-                <p className="text-sm text-gray-300">{lang === 'de' ? 'Auf Karte auswählen…' : 'Select on map…'}</p>
-              </div>
-              <div className="p-4 rounded-xl bg-gray-50 border border-gray-100">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">{t.dropoff}</p>
-                <p className="text-sm text-gray-300">{lang === 'de' ? 'Auf Karte auswählen…' : 'Select on map…'}</p>
-              </div>
-            </div>
-            <button onClick={() => setShowModal(false)}
-              className="w-full py-3.5 rounded-xl font-semibold text-sm text-white"
-              style={{ background: 'linear-gradient(135deg, #16a34a, #15803d)' }}>
-              {t.comingSoon}
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

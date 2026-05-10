@@ -147,7 +147,7 @@ export default function LoginPage() {
   const isValid = digits.length >= 9
 
   const handleContinue = () => {
-    if (isValid) navigate('/welcome', { state: { phone: `+49 ${phone}`, lang } })
+    if (isValid) navigate('/otp', { state: { phone: `+49 ${phone}`, lang } })
   }
 
   return (

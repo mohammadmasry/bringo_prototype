@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import LangToggle from '../components/LangToggle'
 import { useLang } from '../hooks/useLang'
 
@@ -31,7 +31,6 @@ const tr = {
     title: 'Aufträge in der Nähe', available: 'verfügbar',
     allSizes: 'Alle Größen', accept: 'Annehmen',
     footer: 'Aufträge im Umkreis von 5 km · Aktualisierung alle 30 s',
-    acceptedTitle: 'Auftrag angenommen!', backToOrders: '← Zurück zu den Aufträgen',
     minsAgo: (n: number) => `vor ${n} Min.`,
   },
   en: {
@@ -43,12 +42,11 @@ const tr = {
     title: 'Orders nearby', available: 'available',
     allSizes: 'All sizes', accept: 'Accept',
     footer: 'Showing orders within 5 km · Updates every 30 s',
-    acceptedTitle: 'Order accepted!', backToOrders: '← Back to orders',
     minsAgo: (n: number) => `${n} min ago`,
   },
 }
 
-function OrderCard({ order, onAccept, acceptLabel }: { order: Order; onAccept: (id: string) => void; acceptLabel: string }) {
+function OrderCard({ order, onAccept, acceptLabel, minsAgoLabel }: { order: Order; onAccept: (order: Order) => void; acceptLabel: string; minsAgoLabel: string }) {
   const size = SIZE_COLORS[order.size]
   return (
     <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
@@ -76,8 +74,8 @@ function OrderCard({ order, onAccept, acceptLabel }: { order: Order; onAccept: (
         </div>
       </div>
       <div className="flex items-center justify-between">
-        <span className="text-xs text-gray-300">{order.minsAgo} min ago</span>
-        <button onClick={() => onAccept(order.id)}
+        <span className="text-xs text-gray-300">{minsAgoLabel}</span>
+        <button onClick={() => onAccept(order)}
           className="px-5 py-2 rounded-xl text-sm font-semibold text-white transition-all active:scale-95"
           style={{ background: 'linear-gradient(135deg, #16a34a, #15803d)', boxShadow: '0 2px 8px rgba(22,163,74,0.3)' }}>
           {acceptLabel}
@@ -89,32 +87,16 @@ function OrderCard({ order, onAccept, acceptLabel }: { order: Order; onAccept: (
 
 export default function CourierHomePage() {
   const location = useLocation()
+  const navigate = useNavigate()
   const { firstName = 'there' } = (location.state as { firstName?: string } | null) ?? {}
-  const [accepted, setAccepted] = useState<string | null>(null)
   const [filter, setFilter] = useState<'All' | 'S' | 'M' | 'L'>('All')
   const { lang, setLang } = useLang()
   const t = tr[lang]
 
   const filtered = MOCK_ORDERS.filter((o) => filter === 'All' || o.size === filter)
 
-  if (accepted) {
-    const order = MOCK_ORDERS.find((o) => o.id === accepted)!
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center" style={{ background: '#f8fafc' }}>
-        <div className="w-20 h-20 rounded-full flex items-center justify-center mb-6"
-          style={{ background: 'linear-gradient(135deg, #f0fdf4, #dcfce7)' }}>
-          <svg className="w-10 h-10 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-          </svg>
-        </div>
-        <h1 className="text-3xl font-black text-gray-900 mb-2">{t.acceptedTitle}</h1>
-        <p className="text-gray-400 mb-1">{order.pickup}</p>
-        <p className="text-gray-300 text-sm mb-8">→ {order.dropoff}</p>
-        <button onClick={() => setAccepted(null)} className="text-sm text-green-600 hover:text-green-700 font-semibold">
-          {t.backToOrders}
-        </button>
-      </div>
-    )
+  const handleAccept = (order: Order) => {
+    navigate('/active-delivery', { state: { firstName, order } })
   }
 
   return (
@@ -162,7 +144,7 @@ export default function CourierHomePage() {
       <div className="flex-1 px-6 py-5 max-w-lg mx-auto w-full">
         <div className="space-y-3">
           {filtered.map((order) => (
-            <OrderCard key={order.id} order={order} onAccept={setAccepted} acceptLabel={t.accept} />
+            <OrderCard key={order.id} order={order} onAccept={handleAccept} acceptLabel={t.accept} minsAgoLabel={t.minsAgo(order.minsAgo)} />
           ))}
         </div>
         <p className="text-center text-xs text-gray-300 mt-8">{t.footer}</p>
