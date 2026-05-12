@@ -4,6 +4,9 @@ import LangToggle from '../components/LangToggle'
 import { useLang } from '../hooks/useLang'
 import { clearSession } from '../lib/session'
 
+type SurveyLang = 'en' | 'de'
+type TextSize = 'normal' | 'large' | 'xl'
+
 const translations = {
   de: {
     badge: 'Jetzt verfügbar in Deutschland',
@@ -41,6 +44,484 @@ const translations = {
   },
 }
 
+const surveyQuestions = {
+  en: [
+    {
+      emoji: '👤',
+      question: 'Who are you?',
+      multi: false,
+      options: [
+        'I am under 70 and would like to place an order for myself',
+        'I am 70 or over and would like to place an order for myself',
+        'I am a relative / carer and would like to book the service for someone else',
+      ],
+    },
+    {
+      emoji: '🎓',
+      question: 'Is it important to you that the couriers are registered students?',
+      multi: false,
+      options: ['Yes', "No, I don't care", "Don't know / No answer"],
+    },
+    {
+      emoji: '💳',
+      question: 'Which payment method would you prefer?',
+      multi: true,
+      options: ['Cash on delivery', 'SEPA Direct Debit', 'PayPal', 'Credit card', 'Other'],
+    },
+    {
+      emoji: '📅',
+      question: 'How often do you expect to use the service?',
+      multi: false,
+      options: ['Occasionally', 'Frequently', 'Once in a while / irregular', "I don't know yet"],
+    },
+    {
+      emoji: '🛒',
+      question: 'What type of orders would you like to process?',
+      multi: true,
+      options: [
+        'Grocery shopping / Weekly shop',
+        'Cooked dishes from restaurants',
+        'Medicines / pharmacy visits',
+        'Errands / services',
+        'Individual items',
+        'Other',
+      ],
+    },
+    {
+      emoji: '💚',
+      question: 'How useful do you think a courier service like this is?',
+      multi: false,
+      options: [
+        'Very useful – I would use it regularly',
+        'Useful – I’d use it from time to time',
+        'Not something I personally need, but I see the benefits',
+        'Not appropriate / necessary',
+        "I don't know",
+      ],
+    },
+    {
+      emoji: '📣',
+      question: 'Would you recommend our service to others?',
+      multi: false,
+      options: ['Yes', 'Perhaps', 'No'],
+    },
+    {
+      emoji: '💬',
+      question: 'Do you have any further requests or comments?',
+      multi: false,
+      options: [],
+      text: true,
+    },
+  ],
+  de: [
+    {
+      emoji: '👤',
+      question: 'Wer sind Sie?',
+      multi: false,
+      options: [
+        'Ich bin unter 70 Jahre alt und möchte für mich bestellen',
+        'Ich bin 70 Jahre oder älter und möchte für mich bestellen',
+        'Ich bin Angehörige / Pflegende und würde den Service für andere buchen',
+      ],
+    },
+    {
+      emoji: '🎓',
+      question: 'Ist es Ihnen wichtig, dass die Kuriere zertifizierte Studierende sind?',
+      multi: false,
+      options: ['Ja', 'Nein, das ist mir egal', 'Weiß nicht / keine Angabe'],
+    },
+    {
+      emoji: '💳',
+      question: 'Welche Zahlungsart würden Sie bevorzugen?',
+      multi: true,
+      options: ['Barzahlung bei Übergabe', 'SEPA-Lastschrift', 'PayPal', 'Kreditkarte', 'Andere'],
+    },
+    {
+      emoji: '📅',
+      question: 'Wie häufig würden Sie den Service voraussichtlich nutzen?',
+      multi: false,
+      options: ['Gelegentlich', 'Häufig', 'Vereinzelt / unregelmäßig', 'Weiß noch nicht'],
+    },
+    {
+      emoji: '🛒',
+      question: 'Welche Art von Bestellungen würden Sie abwickeln wollen?',
+      multi: true,
+      options: [
+        'Lebensmitteleinkäufe / Wocheneinkauf',
+        'Gekochtes Essen aus Restaurants',
+        'Medikamente / Apothekengänge',
+        'Besorgungen / Dienstleistungen',
+        'Einzelposten',
+        'Andere',
+      ],
+    },
+    {
+      emoji: '💚',
+      question: 'Wie sinnvoll finden Sie einen solchen Kurier-Service?',
+      multi: false,
+      options: [
+        'Sehr sinnvoll – ich würde ihn regelmäßig nutzen',
+        'Sinnvoll – ich würde ihn gelegentlich nutzen',
+        'Nicht notwendig für mich persönlich, aber ich sehe den Nutzen',
+        'Nicht sinnvoll / erforderlich',
+        'Weiß nicht',
+      ],
+    },
+    {
+      emoji: '📣',
+      question: 'Würden Sie unseren Service weiterempfehlen?',
+      multi: false,
+      options: ['Ja', 'Vielleicht', 'Nein'],
+    },
+    {
+      emoji: '💬',
+      question: 'Haben Sie noch Wünsche oder Anmerkungen?',
+      multi: false,
+      options: [],
+      text: true,
+    },
+  ],
+}
+
+function OnboardingFlow({ onFinish }: { onFinish: () => void }) {
+  const [step, setStep] = useState(0)
+  const [surveyLang, setSurveyLang] = useState<SurveyLang>('de')
+  const [textSize, setTextSize] = useState<TextSize>('large')
+  const [questionIndex, setQuestionIndex] = useState(0)
+  const [answers, setAnswers] = useState<Record<number, string | string[]>>({})
+  const [comment, setComment] = useState('')
+
+  const fontClass =
+    textSize === 'normal' ? 'text-base' : textSize === 'large' ? 'text-lg' : 'text-xl'
+
+  const q = surveyQuestions[surveyLang][questionIndex]
+
+  const selectOption = (option: string) => {
+    if (q.multi) {
+      const current = Array.isArray(answers[questionIndex])
+        ? (answers[questionIndex] as string[])
+        : []
+
+      setAnswers({
+        ...answers,
+        [questionIndex]: current.includes(option)
+          ? current.filter(item => item !== option)
+          : [...current, option],
+      })
+    } else {
+      setAnswers({ ...answers, [questionIndex]: option })
+    }
+  }
+
+  const isSelected = (option: string) => {
+    const answer = answers[questionIndex]
+    return q.multi && Array.isArray(answer) ? answer.includes(option) : answer === option
+  }
+
+  return (
+    <div
+      className={`min-h-screen flex ${fontClass}`}
+      style={{
+        background:
+          'linear-gradient(150deg, #0d3d1e 0%, #14532d 35%, #166534 70%, #16a34a 100%)',
+      }}
+    >
+      <div className="hidden md:flex md:w-[45%] relative flex-col justify-between p-10 lg:p-14 overflow-hidden">
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            backgroundImage:
+              'radial-gradient(circle, rgba(255,255,255,0.08) 1px, transparent 1px)',
+            backgroundSize: '28px 28px',
+          }}
+        />
+
+        <div className="relative z-10 flex items-center gap-2.5">
+          <div
+            className="w-9 h-9 rounded-xl flex items-center justify-center border border-white/20"
+            style={{ background: 'rgba(255,255,255,0.12)' }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
+              <path d="M12 2C8.686 2 6 4.686 6 8c0 1.77.734 3.37 1.91 4.51L5 22h14l-2.91-9.49A5.99 5.99 0 0 0 18 8c0-3.314-2.686-6-6-6zm0 2a4 4 0 1 1 0 8 4 4 0 0 1 0-8z" />
+            </svg>
+          </div>
+          <span className="text-xl font-bold text-white tracking-tight">bringo</span>
+        </div>
+
+        <div className="relative z-10 space-y-6">
+          <div className="inline-flex bg-white/10 border border-white/10 rounded-full px-4 py-2 text-green-200 text-xs font-semibold uppercase tracking-wide">
+            Prototype Survey
+          </div>
+
+          <h1 className="text-4xl lg:text-5xl font-black text-white leading-tight">
+            Help shape
+            <br />
+            local deliveries
+            <br />
+            <span className="text-green-300">for real users.</span>
+          </h1>
+
+          <p className="text-white/60 leading-relaxed max-w-md">
+            Your answers help us understand how Bringo should support people with groceries,
+            pharmacy visits, restaurant orders, and everyday errands.
+          </p>
+
+          <div className="grid grid-cols-3 gap-3">
+            <div className="rounded-2xl bg-white/10 border border-white/10 p-4 text-center text-white">
+              <div className="text-2xl mb-1">⏱️</div>
+              <p className="text-xs text-white/70">2 minutes</p>
+            </div>
+            <div className="rounded-2xl bg-white/10 border border-white/10 p-4 text-center text-white">
+              <div className="text-2xl mb-1">🔒</div>
+              <p className="text-xs text-white/70">Anonymous</p>
+            </div>
+            <div className="rounded-2xl bg-white/10 border border-white/10 p-4 text-center text-white">
+              <div className="text-2xl mb-1">🎓</div>
+              <p className="text-xs text-white/70">Student-led</p>
+            </div>
+          </div>
+        </div>
+
+        <p className="relative z-10 text-white/20 text-xs">© 2026 Bringo · Germany</p>
+      </div>
+
+      <div className="flex-1 bg-white min-h-screen flex items-center justify-center px-6 py-10">
+        <div className="w-full max-w-[520px]">
+          {step === 0 && (
+            <div className="space-y-8">
+              <div className="inline-flex items-center gap-2 bg-green-50 border border-green-100 rounded-full px-3 py-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                <span className="text-xs font-semibold text-green-700 tracking-wide uppercase">
+                  Quick feedback
+                </span>
+              </div>
+
+              <div>
+                <h1 className="font-black text-gray-900 text-5xl lg:text-6xl leading-none mb-5">
+                  Welcome to
+                  <br />
+                  <span className="gradient-text">Bringo.</span>
+                </h1>
+                <p className="text-gray-500 text-xl leading-relaxed">
+                  Bringo connects people who need help with local errands to verified student
+                  couriers nearby. Before you sign up, we would like to ask a few quick questions
+                  so we can improve the prototype for real users.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div className="rounded-2xl bg-green-50 border border-green-100 p-4 text-center">
+                  <div className="text-2xl mb-1">🛒</div>
+                  <p className="text-sm font-semibold text-green-800">Groceries</p>
+                </div>
+                <div className="rounded-2xl bg-green-50 border border-green-100 p-4 text-center">
+                  <div className="text-2xl mb-1">💊</div>
+                  <p className="text-sm font-semibold text-green-800">Pharmacy</p>
+                </div>
+                <div className="rounded-2xl bg-green-50 border border-green-100 p-4 text-center">
+                  <div className="text-2xl mb-1">📍</div>
+                  <p className="text-sm font-semibold text-green-800">Errands</p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setStep(1)}
+                className="w-full py-4 rounded-xl font-semibold text-white text-base"
+                style={{
+                  background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
+                  boxShadow: '0 4px 16px rgba(22,163,74,0.35)',
+                }}
+              >
+                Start survey →
+              </button>
+
+              <button onClick={onFinish} className="w-full text-green-700 underline font-medium">
+                Skip for now
+              </button>
+            </div>
+          )}
+
+          {step === 1 && (
+            <div className="space-y-6">
+              <h2 className="text-4xl font-black text-gray-900">Choose your language</h2>
+              <p className="text-gray-500 text-lg">Wählen Sie Ihre Sprache aus.</p>
+
+              <button
+                onClick={() => { setSurveyLang('de'); setStep(2) }}
+                className="w-full flex items-center justify-between border border-gray-200 rounded-2xl p-5 hover:bg-green-50 hover:border-green-200 transition"
+              >
+                <span className="font-bold text-xl">🇩🇪 Deutsch</span>
+                <span>→</span>
+              </button>
+
+              <button
+                onClick={() => { setSurveyLang('en'); setStep(2) }}
+                className="w-full flex items-center justify-between border border-gray-200 rounded-2xl p-5 hover:bg-green-50 hover:border-green-200 transition"
+              >
+                <span className="font-bold text-xl">🇺🇸 English</span>
+                <span>→</span>
+              </button>
+
+              <p className="text-sm text-gray-400">
+                🔒 Your answers are anonymous and used only to improve Bringo.
+              </p>
+            </div>
+          )}
+                    {step === 2 && (
+            <div className="space-y-6">
+              <h2 className="text-4xl font-black text-gray-900">
+                {surveyLang === 'de' ? 'Textgröße anpassen' : 'Adjust text size'}
+              </h2>
+
+              <p className="text-gray-500 text-lg">
+                {surveyLang === 'de'
+                  ? 'Wählen Sie die Textgröße, die für Sie am angenehmsten ist.'
+                  : 'Choose the text size that feels most comfortable for you.'}
+              </p>
+
+              {(['normal', 'large', 'xl'] as TextSize[]).map(size => (
+                <button
+                  key={size}
+                  onClick={() => setTextSize(size)}
+                  className={`w-full border rounded-2xl p-5 text-left transition ${
+                    textSize === size ? 'border-green-600 bg-green-50' : 'border-gray-200 hover:bg-green-50'
+                  }`}
+                >
+                  <span className={size === 'normal' ? 'text-xl' : size === 'large' ? 'text-2xl' : 'text-3xl'}>
+                    Aa
+                  </span>
+                  <span className="ml-4 font-bold">
+                    {surveyLang === 'de'
+                      ? size === 'normal'
+                        ? 'Normal'
+                        : size === 'large'
+                        ? 'Groß'
+                        : 'Extra groß'
+                      : size === 'normal'
+                      ? 'Normal'
+                      : size === 'large'
+                      ? 'Large'
+                      : 'Extra Large'}
+                  </span>
+                </button>
+              ))}
+
+              <button
+                onClick={() => setStep(3)}
+                className="w-full bg-green-600 text-white py-4 rounded-xl font-semibold"
+              >
+                {surveyLang === 'de' ? 'Weiter →' : 'Continue →'}
+              </button>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between text-sm text-gray-400">
+                <span>{surveyLang === 'de' ? 'Frage' : 'Question'} {questionIndex + 1}</span>
+                <span>{questionIndex + 1} / {surveyQuestions[surveyLang].length}</span>
+              </div>
+
+              <div className="w-full bg-gray-100 rounded-full h-2">
+                <div
+                  className="bg-green-600 h-2 rounded-full transition-all"
+                  style={{ width: `${((questionIndex + 1) / surveyQuestions[surveyLang].length) * 100}%` }}
+                />
+              </div>
+
+              <div className="text-center space-y-3">
+                <div className="text-5xl">{q.emoji}</div>
+                <h2 className="text-3xl font-black text-gray-900">{q.question}</h2>
+                {q.multi && (
+                  <p className="text-gray-400">
+                    {surveyLang === 'de' ? 'Mehrfachauswahl möglich' : 'Multiple answers allowed'}
+                  </p>
+                )}
+              </div>
+
+              {q.text ? (
+                <textarea
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  className="w-full border border-gray-200 rounded-2xl p-4 min-h-40 outline-none focus:border-green-500"
+                  placeholder={surveyLang === 'de' ? 'Schreiben Sie hier...' : 'Write your comment here...'}
+                />
+              ) : (
+                <div className="space-y-3">
+                  {q.options.map(option => {
+                    const selected = isSelected(option)
+
+                    return (
+                      <button
+                        key={option}
+                        onClick={() => selectOption(option)}
+                        className={`w-full border p-4 rounded-2xl text-left transition flex items-center gap-3 ${
+                          selected
+                            ? 'bg-green-50 border-green-500 text-green-900'
+                            : 'border-gray-200 hover:bg-green-50 hover:border-green-200'
+                        }`}
+                      >
+                        <span className="text-xl">
+                          {q.multi ? (selected ? '☑️' : '☐') : (selected ? '●' : '○')}
+                        </span>
+                        <span>{option}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => questionIndex === 0 ? setStep(2) : setQuestionIndex(questionIndex - 1)}
+                  className="w-1/2 border border-gray-200 py-3 rounded-xl font-semibold"
+                >
+                  {surveyLang === 'de' ? 'Zurück' : 'Back'}
+                </button>
+
+                <button
+                  onClick={() => questionIndex === surveyQuestions[surveyLang].length - 1 ? setStep(4) : setQuestionIndex(questionIndex + 1)}
+                  className="w-1/2 bg-green-600 text-white py-3 rounded-xl font-semibold"
+                >
+                  {surveyLang === 'de' ? 'Weiter' : 'Next'}
+                </button>
+              </div>
+
+              <button onClick={onFinish} className="w-full text-green-700 underline font-medium">
+                {surveyLang === 'de' ? 'Umfrage überspringen' : 'Skip survey'}
+              </button>
+            </div>
+          )}
+
+          {step === 4 && (
+            <div className="text-center space-y-7">
+              <div className="text-7xl">✅</div>
+              <h2 className="text-5xl font-black text-gray-900">
+                {surveyLang === 'de' ? 'Vielen Dank!' : 'Thank you!'}
+              </h2>
+              <p className="text-gray-500 text-xl leading-relaxed">
+                {surveyLang === 'de'
+                  ? 'Ihr Feedback hilft uns, Bringo zu verbessern und die Bedürfnisse der Nutzer besser zu verstehen.'
+                  : 'Your feedback helps us improve Bringo and understand what users need.'}
+              </p>
+              <button
+                onClick={onFinish}
+                className="w-full py-4 rounded-xl font-semibold text-white"
+                style={{
+                  background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
+                  boxShadow: '0 4px 16px rgba(22,163,74,0.35)',
+                }}
+              >
+                {surveyLang === 'de' ? 'Weiter zur Anmeldung →' : 'Continue to sign up →'}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function formatPhone(value: string): string {
   let digits = value.replace(/\D/g, '')
   if (digits.startsWith('49')) digits = digits.slice(2)
@@ -57,7 +538,6 @@ function MockOrderCard({ activeLabel }: { activeLabel: string }) {
       className="rounded-2xl p-5 border border-white/10"
       style={{ background: 'rgba(255,255,255,0.08)' }}
     >
-      {/* Header */}
       <div className="flex items-center gap-2 mb-4">
         <span className="w-2 h-2 rounded-full bg-green-300 pulse-dot inline-block" />
         <span className="text-green-300 text-xs font-semibold uppercase tracking-wider">
@@ -65,17 +545,13 @@ function MockOrderCard({ activeLabel }: { activeLabel: string }) {
         </span>
       </div>
 
-      {/* Route visualization */}
       <div className="flex gap-3 mb-4">
-        {/* Left: dots + animated line */}
         <div className="flex flex-col items-center pt-0.5 shrink-0">
-          {/* Pickup — pulsing ring */}
           <div className="relative" style={{ width: 12, height: 12 }}>
             <div className="absolute inset-0 rounded-full bg-green-400/40 animate-ping" />
             <div className="relative w-3 h-3 rounded-full bg-green-400" />
           </div>
 
-          {/* Line + moving courier dot */}
           <div className="relative my-1.5" style={{ width: 2, minHeight: 30, flex: 1 }}>
             <div
               className="absolute inset-0"
@@ -94,11 +570,9 @@ function MockOrderCard({ activeLabel }: { activeLabel: string }) {
             />
           </div>
 
-          {/* Dropoff dot */}
           <div className="w-3 h-3 rounded-full bg-white/40 shrink-0" />
         </div>
 
-        {/* Right: addresses */}
         <div className="flex flex-col justify-between flex-1 py-0.5 gap-2">
           <span className="text-white/80 text-sm leading-tight">
             CAMPUS Pfarrkirchen, Petersbogen 1
@@ -109,7 +583,6 @@ function MockOrderCard({ activeLabel }: { activeLabel: string }) {
         </div>
       </div>
 
-      {/* Footer */}
       <div className="flex items-center justify-between pt-3 border-t border-white/10">
         <div className="flex items-center gap-1">
           <svg className="w-3.5 h-3.5 text-yellow-300" viewBox="0 0 24 24" fill="currentColor">
@@ -141,6 +614,7 @@ function FeaturePill({ icon, text }: { icon: React.ReactNode; text: string }) {
 export default function LoginPage() {
   const { lang } = useLang()
   const [phone, setPhone] = useState('')
+  const [showOnboarding, setShowOnboarding] = useState(true)
   const navigate = useNavigate()
 
   useEffect(() => { clearSession() }, [])
@@ -153,10 +627,12 @@ export default function LoginPage() {
     if (isValid) navigate('/otp', { state: { phone: `+49 ${phone}`, lang } })
   }
 
+  if (showOnboarding) {
+    return <OnboardingFlow onFinish={() => setShowOnboarding(false)} />
+  }
+
   return (
     <div className="min-h-screen flex">
-
-      {/* ── Left panel ── */}
       <div
         className="hidden md:flex md:w-[48%] lg:w-[52%] relative flex-col justify-between p-10 lg:p-14 overflow-hidden"
         style={{
@@ -173,7 +649,6 @@ export default function LoginPage() {
           }}
         />
 
-        {/* Logo */}
         <div className="relative z-10 flex items-center gap-2.5">
           <div
             className="w-9 h-9 rounded-xl flex items-center justify-center border border-white/20"
@@ -186,7 +661,6 @@ export default function LoginPage() {
           <span className="text-xl font-bold text-white tracking-tight">bringo</span>
         </div>
 
-        {/* Center */}
         <div className="relative z-10 space-y-7">
           <div>
             <h2 className="text-4xl lg:text-5xl font-black text-white leading-tight mb-3">
@@ -233,12 +707,8 @@ export default function LoginPage() {
         <p className="relative z-10 text-white/20 text-xs">{tr.footer}</p>
       </div>
 
-      {/* ── Right panel ── */}
       <div className="flex-1 flex flex-col bg-white min-h-screen relative">
-
-        {/* Top bar */}
         <div className="flex items-center justify-between px-6 pt-6 md:px-8 md:pt-7">
-          {/* Mobile-only logo */}
           <div className="md:hidden flex items-center gap-2.5">
             <div
               className="w-8 h-8 rounded-lg flex items-center justify-center"
@@ -250,16 +720,12 @@ export default function LoginPage() {
             </div>
             <span className="text-xl font-bold text-gray-900">bringo</span>
           </div>
-          {/* Spacer on desktop so toggle goes to the right */}
           <div className="hidden md:block" />
           <LangToggle />
         </div>
 
-        {/* Form */}
         <div className="flex-1 flex items-center justify-center px-8 lg:px-16 py-10">
           <div className="w-full max-w-[400px]">
-
-            {/* Badge */}
             <div className="inline-flex items-center gap-2 bg-green-50 border border-green-100 rounded-full px-3 py-1.5 mb-8">
               <span className="w-1.5 h-1.5 rounded-full bg-green-500 pulse-dot" />
               <span className="text-xs font-semibold text-green-700 tracking-wide uppercase">
@@ -267,7 +733,6 @@ export default function LoginPage() {
               </span>
             </div>
 
-            {/* Heading */}
             <h1 className="font-black mb-5">
               <span className="block text-6xl lg:text-[72px] text-gray-900 leading-none">
                 {tr.h1}
@@ -278,7 +743,6 @@ export default function LoginPage() {
             </h1>
             <p className="text-gray-400 text-xl leading-relaxed mb-10">{tr.subtitle}</p>
 
-            {/* Phone input */}
             <div className="mb-4">
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 {tr.phoneLabel}
@@ -308,7 +772,6 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Continue */}
             <button
               onClick={handleContinue}
               disabled={!isValid}
@@ -333,7 +796,6 @@ export default function LoginPage() {
               </svg>
             </button>
 
-            {/* Terms */}
             <p className="text-center text-xs text-gray-400 leading-relaxed">
               {lang === 'de' ? (
                 <>
