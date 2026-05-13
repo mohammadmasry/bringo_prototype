@@ -191,6 +191,57 @@ function OnboardingFlow({ onFinish }: { onFinish: () => void }) {
   const [answers, setAnswers] = useState<Record<number, string | string[]>>({})
   const [comment, setComment] = useState('')
 
+  const introText = {
+    en: {
+      badge: 'Quick feedback',
+      leftBadge: 'Prototype Survey',
+      leftTitle1: 'Help shape',
+      leftTitle2: 'local deliveries',
+      leftTitle3: 'for real users.',
+      leftDesc:
+        'Your answers help us understand how Bringo should support people with groceries, pharmacy visits, restaurant orders, and everyday errands.',
+      time: '2 minutes',
+      anonymous: 'Anonymous',
+      studentLed: 'Student-led',
+      welcome: 'Welcome to',
+      desc:
+        'Bringo connects people who need help with local errands to verified student couriers nearby. Before you sign up, we would like to ask a few quick questions so we can improve the prototype for real users.',
+      groceries: 'Groceries',
+      pharmacy: 'Pharmacy',
+      errands: 'Errands',
+      start: 'Start survey →',
+      skip: 'Skip for now',
+      languageTitle: 'Choose your language',
+      languageSub: 'Wählen Sie Ihre Sprache aus.',
+      privacy: 'Your answers are anonymous and used only to improve Bringo.',
+    },
+    de: {
+      badge: 'Kurzes Feedback',
+      leftBadge: 'Prototype-Umfrage',
+      leftTitle1: 'Hilf uns,',
+      leftTitle2: 'lokale Lieferungen',
+      leftTitle3: 'besser zu gestalten.',
+      leftDesc:
+        'Ihre Antworten helfen uns zu verstehen, wie Bringo Menschen bei Einkäufen, Apothekengängen, Restaurantbestellungen und alltäglichen Besorgungen unterstützen kann.',
+      time: '2 Minuten',
+      anonymous: 'Anonym',
+      studentLed: 'Von Studierenden',
+      welcome: 'Willkommen bei',
+      desc:
+        'Bringo verbindet Menschen, die Hilfe bei lokalen Besorgungen brauchen, mit verifizierten studentischen Kurieren in der Nähe. Bevor Sie sich anmelden, möchten wir ein paar kurze Fragen stellen, damit wir den Prototyp verbessern können.',
+      groceries: 'Einkäufe',
+      pharmacy: 'Apotheke',
+      errands: 'Besorgungen',
+      start: 'Umfrage starten →',
+      skip: 'Jetzt überspringen',
+      languageTitle: 'Sprache auswählen',
+      languageSub: 'Choose your language.',
+      privacy: 'Ihre Antworten sind anonym und werden nur zur Verbesserung von Bringo genutzt.',
+    },
+  }
+
+  const intro = introText[surveyLang]
+
   const fontClass =
     textSize === 'normal' ? 'text-base' : textSize === 'large' ? 'text-lg' : 'text-xl'
 
@@ -250,34 +301,31 @@ function OnboardingFlow({ onFinish }: { onFinish: () => void }) {
 
         <div className="relative z-10 space-y-6">
           <div className="inline-flex bg-white/10 border border-white/10 rounded-full px-4 py-2 text-green-200 text-xs font-semibold uppercase tracking-wide">
-            Prototype Survey
+            {intro.leftBadge}
           </div>
 
           <h1 className="text-4xl lg:text-5xl font-black text-white leading-tight">
-            Help shape
+            {intro.leftTitle1}
             <br />
-            local deliveries
+            {intro.leftTitle2}
             <br />
-            <span className="text-green-300">for real users.</span>
+            <span className="text-green-300">{intro.leftTitle3}</span>
           </h1>
 
-          <p className="text-white/60 leading-relaxed max-w-md">
-            Your answers help us understand how Bringo should support people with groceries,
-            pharmacy visits, restaurant orders, and everyday errands.
-          </p>
+          <p className="text-white/60 leading-relaxed max-w-md">{intro.leftDesc}</p>
 
           <div className="grid grid-cols-3 gap-3">
             <div className="rounded-2xl bg-white/10 border border-white/10 p-4 text-center text-white">
               <div className="text-2xl mb-1">⏱️</div>
-              <p className="text-xs text-white/70">2 minutes</p>
+              <p className="text-xs text-white/70">{intro.time}</p>
             </div>
             <div className="rounded-2xl bg-white/10 border border-white/10 p-4 text-center text-white">
               <div className="text-2xl mb-1">🔒</div>
-              <p className="text-xs text-white/70">Anonymous</p>
+              <p className="text-xs text-white/70">{intro.anonymous}</p>
             </div>
             <div className="rounded-2xl bg-white/10 border border-white/10 p-4 text-center text-white">
               <div className="text-2xl mb-1">🎓</div>
-              <p className="text-xs text-white/70">Student-led</p>
+              <p className="text-xs text-white/70">{intro.studentLed}</p>
             </div>
           </div>
         </div>
@@ -287,40 +335,57 @@ function OnboardingFlow({ onFinish }: { onFinish: () => void }) {
 
       <div className="flex-1 bg-white min-h-screen flex items-center justify-center px-6 py-10">
         <div className="w-full max-w-[520px]">
+          <div className="flex justify-end mb-8">
+            <div className="inline-flex items-center bg-gray-100 rounded-full p-1 shadow-sm">
+              <button
+                onClick={() => setSurveyLang('de')}
+                className={`px-4 py-2 rounded-full font-bold transition ${
+                  surveyLang === 'de' ? 'bg-white text-gray-900 shadow' : 'text-gray-400'
+                }`}
+              >
+                🇩🇪 DE
+              </button>
+              <button
+                onClick={() => setSurveyLang('en')}
+                className={`px-4 py-2 rounded-full font-bold transition ${
+                  surveyLang === 'en' ? 'bg-white text-gray-900 shadow' : 'text-gray-400'
+                }`}
+              >
+                🇬🇧 EN
+              </button>
+            </div>
+          </div>
+
           {step === 0 && (
             <div className="space-y-8">
               <div className="inline-flex items-center gap-2 bg-green-50 border border-green-100 rounded-full px-3 py-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
                 <span className="text-xs font-semibold text-green-700 tracking-wide uppercase">
-                  Quick feedback
+                  {intro.badge}
                 </span>
               </div>
 
               <div>
                 <h1 className="font-black text-gray-900 text-5xl lg:text-6xl leading-none mb-5">
-                  Welcome to
+                  {intro.welcome}
                   <br />
                   <span className="gradient-text">Bringo.</span>
                 </h1>
-                <p className="text-gray-500 text-xl leading-relaxed">
-                  Bringo connects people who need help with local errands to verified student
-                  couriers nearby. Before you sign up, we would like to ask a few quick questions
-                  so we can improve the prototype for real users.
-                </p>
+                <p className="text-gray-500 text-xl leading-relaxed">{intro.desc}</p>
               </div>
 
               <div className="grid grid-cols-3 gap-3">
                 <div className="rounded-2xl bg-green-50 border border-green-100 p-4 text-center">
                   <div className="text-2xl mb-1">🛒</div>
-                  <p className="text-sm font-semibold text-green-800">Groceries</p>
+                  <p className="text-sm font-semibold text-green-800">{intro.groceries}</p>
                 </div>
                 <div className="rounded-2xl bg-green-50 border border-green-100 p-4 text-center">
                   <div className="text-2xl mb-1">💊</div>
-                  <p className="text-sm font-semibold text-green-800">Pharmacy</p>
+                  <p className="text-sm font-semibold text-green-800">{intro.pharmacy}</p>
                 </div>
                 <div className="rounded-2xl bg-green-50 border border-green-100 p-4 text-center">
                   <div className="text-2xl mb-1">📍</div>
-                  <p className="text-sm font-semibold text-green-800">Errands</p>
+                  <p className="text-sm font-semibold text-green-800">{intro.errands}</p>
                 </div>
               </div>
 
@@ -332,19 +397,19 @@ function OnboardingFlow({ onFinish }: { onFinish: () => void }) {
                   boxShadow: '0 4px 16px rgba(22,163,74,0.35)',
                 }}
               >
-                Start survey →
+                {intro.start}
               </button>
 
               <button onClick={onFinish} className="w-full text-green-700 underline font-medium">
-                Skip for now
+                {intro.skip}
               </button>
             </div>
           )}
 
           {step === 1 && (
             <div className="space-y-6">
-              <h2 className="text-4xl font-black text-gray-900">Choose your language</h2>
-              <p className="text-gray-500 text-lg">Wählen Sie Ihre Sprache aus.</p>
+              <h2 className="text-4xl font-black text-gray-900">{intro.languageTitle}</h2>
+              <p className="text-gray-500 text-lg">{intro.languageSub}</p>
 
               <button
                 onClick={() => { setSurveyLang('de'); setStep(2) }}
@@ -358,16 +423,15 @@ function OnboardingFlow({ onFinish }: { onFinish: () => void }) {
                 onClick={() => { setSurveyLang('en'); setStep(2) }}
                 className="w-full flex items-center justify-between border border-gray-200 rounded-2xl p-5 hover:bg-green-50 hover:border-green-200 transition"
               >
-                <span className="font-bold text-xl">🇺🇸 English</span>
+                <span className="font-bold text-xl">🇬🇧 English</span>
                 <span>→</span>
               </button>
 
-              <p className="text-sm text-gray-400">
-                🔒 Your answers are anonymous and used only to improve Bringo.
-              </p>
+              <p className="text-sm text-gray-400">🔒 {intro.privacy}</p>
             </div>
           )}
-                    {step === 2 && (
+
+          {step === 2 && (
             <div className="space-y-6">
               <h2 className="text-4xl font-black text-gray-900">
                 {surveyLang === 'de' ? 'Textgröße anpassen' : 'Adjust text size'}
@@ -697,7 +761,7 @@ export default function LoginPage() {
               text={tr.f3}
               icon={
                 <svg className="w-4 h-4 text-green-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.970 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.970c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" />
                 </svg>
               }
             />
