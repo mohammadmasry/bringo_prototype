@@ -1,4 +1,6 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, useLocation } from 'react-router-dom'
+import { AnimatePresence } from 'framer-motion'
+import PageTransition from './components/PageTransition'
 import LoginPage from './pages/LoginPage'
 import OtpPage from './pages/OtpPage'
 import RolePickerPage from './pages/RolePickerPage'
@@ -10,19 +12,27 @@ import CreateDeliveryPage from './pages/CreateDeliveryPage'
 import CustomerActiveOrderPage from './pages/CustomerActiveOrderPage'
 import CourierActiveOrderPage from './pages/CourierActiveOrderPage'
 
-export default function App() {
+function AnimatedRoutes() {
+  const location = useLocation()
+
   return (
-    <Routes>
-      <Route path="/" element={<LoginPage />} />
-      <Route path="/otp" element={<OtpPage />} />
-      <Route path="/welcome" element={<RolePickerPage />} />
-      <Route path="/onboarding/courier" element={<CourierOnboardingPage />} />
-      <Route path="/onboarding/customer" element={<CustomerOnboardingPage />} />
-      <Route path="/home/courier" element={<CourierHomePage />} />
-      <Route path="/home/customer" element={<CustomerHomePage />} />
-      <Route path="/create-delivery" element={<CreateDeliveryPage />} />
-      <Route path="/active-order" element={<CustomerActiveOrderPage />} />
-      <Route path="/active-delivery" element={<CourierActiveOrderPage />} />
-    </Routes>
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
+        <Route path="/" element={<PageTransition><LoginPage /></PageTransition>} />
+        <Route path="/otp" element={<PageTransition><OtpPage /></PageTransition>} />
+        <Route path="/welcome" element={<PageTransition><RolePickerPage /></PageTransition>} />
+        <Route path="/onboarding/courier" element={<PageTransition><CourierOnboardingPage /></PageTransition>} />
+        <Route path="/onboarding/customer" element={<PageTransition><CustomerOnboardingPage /></PageTransition>} />
+        <Route path="/home/courier" element={<PageTransition><CourierHomePage /></PageTransition>} />
+        <Route path="/home/customer" element={<PageTransition><CustomerHomePage /></PageTransition>} />
+        <Route path="/create-delivery" element={<PageTransition><CreateDeliveryPage /></PageTransition>} />
+        <Route path="/active-order" element={<PageTransition><CustomerActiveOrderPage /></PageTransition>} />
+        <Route path="/active-delivery" element={<PageTransition><CourierActiveOrderPage /></PageTransition>} />
+      </Routes>
+    </AnimatePresence>
   )
+}
+
+export default function App() {
+  return <AnimatedRoutes />
 }

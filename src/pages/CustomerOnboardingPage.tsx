@@ -43,7 +43,7 @@ export default function CustomerOnboardingPage() {
     <div className="min-h-screen bg-white flex flex-col">
       {/* Top bar */}
       <div className="flex items-center gap-3 px-6 pt-7 pb-4">
-        <button onClick={() => navigate(-1)}
+        <button onClick={() => navigate('/welcome')}
           className="w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors shrink-0">
           <svg className="w-4 h-4 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />

@@ -155,7 +155,7 @@ export default function CourierOnboardingPage() {
     : isUniEmail(email)
 
   const goNext = () => { if (step < 3) setStep((s) => s + 1); else setStep(4) }
-  const goBack = () => { if (step > 1) setStep((s) => s - 1); else navigate(-1) }
+  const goBack = () => { if (step > 1) setStep((s) => s - 1); else navigate('/welcome') }
 
   // ── success ──
   if (step === 4) {
