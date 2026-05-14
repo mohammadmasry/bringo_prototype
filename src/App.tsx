@@ -9,6 +9,7 @@ import CustomerOnboardingPage from './pages/CustomerOnboardingPage'
 import CourierHomePage from './pages/CourierHomePage'
 import CustomerHomePage from './pages/CustomerHomePage'
 import CreateDeliveryPage from './pages/CreateDeliveryPage'
+import EasyOrderPage from './pages/EasyOrderPage'
 import CustomerActiveOrderPage from './pages/CustomerActiveOrderPage'
 import CourierActiveOrderPage from './pages/CourierActiveOrderPage'
 
@@ -28,6 +29,7 @@ function AnimatedRoutes() {
         <Route path="/create-delivery" element={<PageTransition><CreateDeliveryPage /></PageTransition>} />
         <Route path="/active-order" element={<PageTransition><CustomerActiveOrderPage /></PageTransition>} />
         <Route path="/active-delivery" element={<PageTransition><CourierActiveOrderPage /></PageTransition>} />
+        <Route path="/easy-order" element={<PageTransition><EasyOrderPage /></PageTransition>} />
       </Routes>
     </AnimatePresence>
   )

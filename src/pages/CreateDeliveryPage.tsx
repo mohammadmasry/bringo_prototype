@@ -74,17 +74,20 @@ const SIZE_COLORS: Record<'S' | 'M' | 'L', { bg: string; text: string }> = {
 }
 
 export default function CreateDeliveryPage() {
-  const [step, setStep] = useState(1)
-  const [pickup, setPickup] = useState('')
-  const [dropoff, setDropoff] = useState('')
-  const [description, setDescription] = useState('')
-  const [size, setSize] = useState<'S' | 'M' | 'L'>('M')
-  const [note, setNote] = useState('')
   const navigate = useNavigate()
   const location = useLocation()
   const { lang } = useLang()
   const t = tr[lang]
-  const { firstName = '' } = (location.state as { firstName?: string } | null) ?? getSession()
+  const state = (location.state as { firstName?: string; prefill?: { pickup: string; dropoff: string; description: string; size: 'S' | 'M' | 'L' } } | null)
+  const { firstName = '' } = state ?? getSession()
+  const prefill = state?.prefill
+
+  const [step, setStep] = useState(prefill ? 4 : 1)
+  const [pickup, setPickup] = useState(prefill?.pickup ?? '')
+  const [dropoff, setDropoff] = useState(prefill?.dropoff ?? '')
+  const [description, setDescription] = useState(prefill?.description ?? '')
+  const [size, setSize] = useState<'S' | 'M' | 'L'>(prefill?.size ?? 'M')
+  const [note, setNote] = useState('')
 
   const canContinue =
     step === 1 ? pickup.trim().length >= 5
@@ -105,7 +108,7 @@ export default function CreateDeliveryPage() {
 
   const goBack = () => {
     if (step > 1) setStep((s) => s - 1)
-    else navigate(-1)
+    else navigate('/home/customer', { state: { firstName } })
   }
 
   return (

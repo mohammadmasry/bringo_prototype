@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import LangToggle from '../components/LangToggle'
+import ChatWidget from '../components/ChatWidget'
 import { useLang } from '../hooks/useLang'
-import { getSession, clearSession } from '../lib/session'
+import { getSession, setSession, clearSession } from '../lib/session'
 import { getActiveOrder, getOrderHistory, type StoredOrder } from '../lib/orderStore'
 
 const tr = {
@@ -12,6 +13,11 @@ const tr = {
       return `${h < 12 ? 'Guten Morgen' : h < 18 ? 'Guten Tag' : 'Guten Abend'}, ${name} 👋`
     },
     title: 'Was brauchst du?',
+    easyTitle: '„Was möchten Sie gebracht bekommen?"',
+    easySub: 'Beschreiben Sie es einfach - unser Assistent erledigt den Rest.',
+    manualTitle: 'Lieferung schrittweise manuell erstellen',
+    switchToEasy: 'Einfacher Modus',
+    switchToStandard: 'Standard-Modus',
     ctaTitle: 'Lieferung erstellen',
     ctaSub: 'Ein verifizierter Student holt es ab und bringt es zu dir.',
     areaLabel: 'Gebiet', deliveryLabel: 'Ø Lieferzeit',
@@ -29,6 +35,11 @@ const tr = {
       return `Good ${h < 12 ? 'morning' : h < 18 ? 'afternoon' : 'evening'}, ${name} 👋`
     },
     title: 'What do you need?',
+    easyTitle: '"What would you like brought to you?"',
+    easySub: 'Describe it in your own words - our assistant takes care of the rest.',
+    manualTitle: 'Create order step by step',
+    switchToEasy: 'Easy Mode',
+    switchToStandard: 'Standard Mode',
     ctaTitle: 'Create a delivery',
     ctaSub: 'A verified student picks it up and brings it to you.',
     areaLabel: 'Area', deliveryLabel: 'Avg. delivery',
@@ -74,7 +85,17 @@ function HistoryCard({ order, t }: { order: StoredOrder; t: typeof tr['en'] }) {
 export default function CustomerHomePage() {
   const location = useLocation()
   const navigate = useNavigate()
-  const { firstName = 'there' } = (location.state as { firstName?: string } | null) ?? getSession()
+  const session = getSession()
+  const { firstName = 'there' } = (location.state as { firstName?: string } | null) ?? session
+  const [mode, setMode] = useState<'standard' | 'easy'>(session.mode ?? 'standard')
+  const isEasyMode = mode === 'easy'
+
+  const toggleMode = () => {
+    const next = mode === 'easy' ? 'standard' : 'easy'
+    setSession({ mode: next })
+    setMode(next)
+    setShowMenu(false)
+  }
   const { lang } = useLang()
   const t = tr[lang]
   const [showMenu, setShowMenu] = useState(false)
@@ -103,7 +124,15 @@ export default function CustomerHomePage() {
                 {firstName[0]?.toUpperCase()}
               </button>
               {showMenu && (
-                <div className="absolute left-0 top-12 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50 min-w-36 animate-fade-in-up">
+                <div className="absolute left-0 top-12 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50 min-w-44 animate-fade-in-up">
+                  <button
+                    onClick={toggleMode}
+                    className="w-full text-left px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                  >
+                    <span>{isEasyMode ? '⚙️' : '✨'}</span>
+                    {isEasyMode ? t.switchToStandard : t.switchToEasy}
+                  </button>
+                  <div className="h-px bg-gray-100 mx-2" />
                   <button
                     onClick={() => navigate('/welcome')}
                     className="w-full text-left px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
@@ -152,25 +181,59 @@ export default function CustomerHomePage() {
             </div>
           </div>
         ) : (
-          /* Main CTA */
-          <button
-            onClick={() => navigate('/create-delivery', { state: { firstName } })}
-            className="w-full text-left rounded-2xl p-6 mb-4 group transition-all duration-200 hover:shadow-lg active:scale-[0.99]"
-            style={{ background: 'linear-gradient(135deg, #14532d 0%, #166534 50%, #16a34a 100%)' }}
-          >
-            <div className="flex items-start justify-between mb-8">
-              <div className="w-12 h-12 rounded-2xl bg-white/15 flex items-center justify-center">
-                <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10" />
+          <div className="mb-4 space-y-3">
+            {/* Primary CTA — always the big green card */}
+            <button
+              onClick={() => navigate(isEasyMode ? '/easy-order' : '/easy-order', { state: { firstName } })}
+              className="w-full text-left rounded-2xl p-6 group transition-all duration-200 hover:shadow-lg active:scale-[0.99]"
+              style={{ background: 'linear-gradient(135deg, #14532d 0%, #166534 50%, #16a34a 100%)' }}
+            >
+              <div className="flex items-start justify-between mb-5">
+                <div className="w-12 h-12 rounded-2xl bg-white/15 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
+                  </svg>
+                </div>
+                <svg className="w-5 h-5 text-white/50 group-hover:text-white/80 group-hover:translate-x-0.5 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
                 </svg>
               </div>
-              <svg className="w-5 h-5 text-white/50 group-hover:text-white/80 group-hover:translate-x-0.5 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <h2 className={`font-bold text-white mb-1 ${isEasyMode ? 'text-2xl' : 'text-xl'}`}>{t.easyTitle}</h2>
+              <p className="text-white/60 text-sm">{t.easySub}</p>
+            </button>
+
+            {/* Divider */}
+            <p className="text-center text-xs text-gray-400 font-medium">
+              {lang === 'de' ? 'oder' : 'or'}
+            </p>
+
+            {/* Manual option — secondary (small link in easy mode, full button in standard) */}
+            {isEasyMode ? (
+              <button
+                onClick={() => navigate('/create-delivery', { state: { firstName } })}
+                className="w-full text-center text-sm text-gray-400 hover:text-gray-600 transition-colors py-1"
+              >
+                {t.manualTitle} →
+              </button>
+            ) : (
+            <button
+              onClick={() => navigate('/create-delivery', { state: { firstName } })}
+              className="w-full text-left rounded-2xl px-5 py-4 bg-white border border-gray-200 flex items-center justify-between group hover:border-gray-300 hover:shadow-sm transition-all active:scale-[0.99]"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center shrink-0">
+                  <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" />
+                  </svg>
+                </div>
+                <span className="text-sm font-semibold text-gray-700">{t.manualTitle}</span>
+              </div>
+              <svg className="w-4 h-4 text-gray-300 group-hover:text-gray-500 group-hover:translate-x-0.5 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
               </svg>
-            </div>
-            <h2 className="text-xl font-bold text-white mb-1">{t.ctaTitle}</h2>
-            <p className="text-white/60 text-sm">{t.ctaSub}</p>
-          </button>
+            </button>
+            )}
+          </div>
         )}
 
         {/* Info cards */}
@@ -226,6 +289,8 @@ export default function CustomerHomePage() {
       {showMenu && (
         <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
       )}
+
+      <ChatWidget firstName={firstName} />
     </div>
   )
 }

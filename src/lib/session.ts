@@ -3,6 +3,7 @@ const KEY = 'bringo-session'
 interface Session {
   firstName?: string
   role?: 'courier' | 'customer'
+  mode?: 'standard' | 'easy'
 }
 
 export function getSession(): Session {
