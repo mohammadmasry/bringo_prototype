@@ -24,9 +24,9 @@ const PRICES: Record<'S' | 'M' | 'L', number> = { S: 3.20, M: 4.50, L: 5.80 }
 
 const tr = {
   de: {
-    s1Title: 'Abholung', s1Sub: 'Wo soll dein Artikel abgeholt werden?',
-    s2Title: 'Zielort', s2Sub: 'Wohin soll dein Artikel geliefert werden?',
-    s3Title: 'Was wird geliefert?', s3Sub: 'Beschreibe deinen Artikel für den Kurier.',
+    s1Title: 'Abholung', s1Sub: 'Wo soll Ihr Artikel abgeholt werden?',
+    s2Title: 'Zielort', s2Sub: 'Wohin soll Ihr Artikel geliefert werden?',
+    s3Title: 'Was wird geliefert?', s3Sub: 'Beschreiben Sie Ihren Artikel für den Kurier.',
     s4Title: 'Bestellung prüfen', s4Sub: 'Alles korrekt?',
     pickupLabel: 'Abholadresse', dropoffLabel: 'Lieferadresse',
     orChoose: 'oder schnell wählen:',

@@ -1,6 +1,8 @@
 import { Routes, Route, useLocation } from 'react-router-dom'
+import { useEffect } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import PageTransition from './components/PageTransition'
+import { getSession } from './lib/session'
 import LoginPage from './pages/LoginPage'
 import OtpPage from './pages/OtpPage'
 import RolePickerPage from './pages/RolePickerPage'
@@ -36,5 +38,10 @@ function AnimatedRoutes() {
 }
 
 export default function App() {
+  useEffect(() => {
+    const { mode } = getSession()
+    document.documentElement.style.fontSize = mode === 'easy' ? '115%' : '100%'
+  }, [])
+
   return <AnimatedRoutes />
 }

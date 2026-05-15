@@ -7,14 +7,14 @@ interface Session {
 }
 
 export function getSession(): Session {
-  try { return JSON.parse(sessionStorage.getItem(KEY) ?? '{}') }
+  try { return JSON.parse(localStorage.getItem(KEY) ?? '{}') }
   catch { return {} }
 }
 
 export function setSession(patch: Partial<Session>) {
-  sessionStorage.setItem(KEY, JSON.stringify({ ...getSession(), ...patch }))
+  localStorage.setItem(KEY, JSON.stringify({ ...getSession(), ...patch }))
 }
 
 export function clearSession() {
-  sessionStorage.removeItem(KEY)
+  localStorage.removeItem(KEY)
 }

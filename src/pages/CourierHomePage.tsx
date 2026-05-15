@@ -25,7 +25,7 @@ const SIZE_COLORS: Record<string, { bg: string; text: string }> = {
 
 const tr = {
   de: {
-    banner: 'Verifizierung läuft — du kannst stöbern, aber noch keine Aufträge annehmen',
+    banner: 'Verifizierung läuft - Sie können stöbern, aber noch keine Aufträge annehmen',
     greet: (name: string) => {
       const h = new Date().getHours()
       return `${h < 12 ? 'Guten Morgen' : h < 18 ? 'Guten Tag' : 'Guten Abend'}, ${name} 👋`

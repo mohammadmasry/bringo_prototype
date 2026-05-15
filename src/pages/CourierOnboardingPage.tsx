@@ -35,8 +35,8 @@ const tr = {
   de: {
     back: 'Zurück',
     stepOf: (n: number) => `Schritt ${n} von 3`,
-    s1Title: 'Dein Name',
-    s1Sub: 'Muss mit deiner Immatrikulationsbescheinigung übereinstimmen.',
+    s1Title: 'Ihr Name',
+    s1Sub: 'Muss mit Ihrer Immatrikulationsbescheinigung übereinstimmen.',
     firstName: 'Vorname', lastName: 'Nachname',
     firstPh: 'Anna', lastPh: 'Müller',
     s2Title: 'Geburtsdatum',
@@ -53,9 +53,9 @@ const tr = {
     emailHint: 'z.B. @tu-berlin.de · @uni-muenchen.de · @stud.th-deg.de',
     continue: 'Weiter', submit: 'Absenden',
     pendingBadge: 'Verifizierung ausstehend',
-    s4Title: 'Du bist dabei!',
-    s4Sub: 'Wir prüfen deinen Antrag — meistens innerhalb von 24 Stunden.',
-    s4Note: 'Du kannst Aufträge durchstöbern, aber erst nach der Freischaltung annehmen.',
+    s4Title: 'Sie sind dabei!',
+    s4Sub: 'Wir prüfen Ihren Antrag - meistens innerhalb von 24 Stunden.',
+    s4Note: 'Sie können Aufträge durchstöbern, aber erst nach der Freischaltung annehmen.',
     s4Btn: 'Aufträge ansehen',
   },
   en: {

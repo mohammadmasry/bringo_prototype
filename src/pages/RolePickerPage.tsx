@@ -8,16 +8,16 @@ type Role = 'courier' | 'customer'
 
 const tr = {
   de: {
-    h1a: 'Wie möchtest du',
+    h1a: 'Wie möchten Sie',
     h1b: 'Bringo nutzen?',
-    subtitle: 'Wähle deine Rolle — du kannst die andere später hinzufügen.',
+    subtitle: 'Wählen Sie Ihre Rolle - Sie können die andere später hinzufügen.',
     useDifferentNumber: 'Andere Nummer verwenden',
     courierTitle: 'Studierender Kurier',
-    courierDesc: 'Nimm Lieferaufträge in deiner Nähe an und verdiene Geld nach deinem eigenen Plan. Perfekt neben dem Studium.',
+    courierDesc: 'Nehmen Sie Lieferaufträge in Ihrer Nähe an und verdienen Sie Geld nach Ihrem eigenen Plan. Perfekt neben dem Studium.',
     courierBadge: 'Bis zu €603 / Monat',
-    courierFeatures: ['Flexible Zeiten — dein Plan', 'Minijob-freundlicher Verdienst', 'Verifizierte Studierenden-Community'],
+    courierFeatures: ['Flexible Zeiten - Ihr Plan', 'Minijob-freundlicher Verdienst', 'Verifizierte Studierenden-Community'],
     customerTitle: 'Kunde',
-    customerDesc: 'Gib eine Lieferung auf — ein verifizierter Studierender in der Nähe holt sie ab und bringt sie direkt zu dir.',
+    customerDesc: 'Geben Sie eine Lieferung auf - ein verifizierter Studierender in der Nähe holt sie ab und bringt sie direkt zu Ihnen.',
     customerBadge: 'Schnell & günstig',
     customerFeatures: ['Live-Karten-Tracking', 'Verifizierte Kuriere', 'Direkter Telefonkontakt'],
     selectLabel: 'Auswählen',

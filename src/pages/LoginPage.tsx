@@ -194,7 +194,7 @@ function OnboardingFlow({ onFinish }: { onFinish: () => void }) {
   const introText = {
     en: {
       badge: 'Quick feedback',
-      leftBadge: 'Prototype Survey',
+      leftBadge: 'Service Survey',
       leftTitle1: 'Help shape',
       leftTitle2: 'local deliveries',
       leftTitle3: 'for real users.',
@@ -205,20 +205,20 @@ function OnboardingFlow({ onFinish }: { onFinish: () => void }) {
       studentLed: 'Student-led',
       welcome: 'Welcome to',
       desc:
-        'Bringo connects people who need help with local errands to verified student couriers nearby. Before you sign up, we would like to ask a few quick questions so we can improve the prototype for real users.',
+        'Bringo connects people who need help with local errands to verified student couriers nearby.\n\nBefore you sign up, we would like to ask a few quick questions so we can improve the service for real users.',
       groceries: 'Groceries',
       pharmacy: 'Pharmacy',
       errands: 'Errands',
       start: 'Start survey →',
-      skip: 'Skip for now',
+      skip: 'Skip and go to sign up',
       languageTitle: 'Choose your language',
       languageSub: 'Wählen Sie Ihre Sprache aus.',
       privacy: 'Your answers are anonymous and used only to improve Bringo.',
     },
     de: {
       badge: 'Kurzes Feedback',
-      leftBadge: 'Prototype-Umfrage',
-      leftTitle1: 'Hilf uns,',
+      leftBadge: 'Service-Umfrage',
+      leftTitle1: 'Helfen Sie uns,',
       leftTitle2: 'lokale Lieferungen',
       leftTitle3: 'besser zu gestalten.',
       leftDesc:
@@ -228,12 +228,12 @@ function OnboardingFlow({ onFinish }: { onFinish: () => void }) {
       studentLed: 'Von Studierenden',
       welcome: 'Willkommen bei',
       desc:
-        'Bringo verbindet Menschen, die Hilfe bei lokalen Besorgungen brauchen, mit verifizierten studentischen Kurieren in der Nähe. Bevor Sie sich anmelden, möchten wir ein paar kurze Fragen stellen, damit wir den Prototyp verbessern können.',
+        'Bringo verbindet Menschen, die Hilfe bei lokalen Besorgungen brauchen, mit verifizierten studentischen Kurieren in der Nähe.\n\nBevor Sie sich anmelden, möchten wir ein paar kurze Fragen stellen, damit wir den Service verbessern können.',
       groceries: 'Einkäufe',
       pharmacy: 'Apotheke',
       errands: 'Besorgungen',
       start: 'Umfrage starten →',
-      skip: 'Jetzt überspringen',
+      skip: 'Überspringen und direkt zur Anmeldung',
       languageTitle: 'Sprache auswählen',
       languageSub: 'Choose your language.',
       privacy: 'Ihre Antworten sind anonym und werden nur zur Verbesserung von Bringo genutzt.',
@@ -371,7 +371,7 @@ function OnboardingFlow({ onFinish }: { onFinish: () => void }) {
                   <br />
                   <span className="gradient-text">Bringo.</span>
                 </h1>
-                <p className="text-gray-500 text-xl leading-relaxed">{intro.desc}</p>
+                <p className="text-gray-500 text-xl leading-relaxed whitespace-pre-line">{intro.desc}</p>
               </div>
 
               <div className="grid grid-cols-3 gap-3">
@@ -552,7 +552,7 @@ function OnboardingFlow({ onFinish }: { onFinish: () => void }) {
               </div>
 
               <button onClick={onFinish} className="w-full text-green-700 underline font-medium">
-                {surveyLang === 'de' ? 'Umfrage überspringen' : 'Skip survey'}
+                {surveyLang === 'de' ? 'Überspringen und direkt zur Anmeldung' : 'Skip and go to sign up'}
               </button>
             </div>
           )}
@@ -863,7 +863,7 @@ export default function LoginPage() {
             <p className="text-center text-xs text-gray-400 leading-relaxed">
               {lang === 'de' ? (
                 <>
-                  Mit dem Fortfahren stimmst du unseren{' '}
+                  Mit dem Fortfahren stimmen Sie unseren{' '}
                   <a href="#" className="text-gray-500 underline underline-offset-2 hover:text-gray-700">
                     Nutzungsbedingungen
                   </a>{' '}

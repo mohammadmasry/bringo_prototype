@@ -12,17 +12,17 @@ const tr = {
       const h = new Date().getHours()
       return `${h < 12 ? 'Guten Morgen' : h < 18 ? 'Guten Tag' : 'Guten Abend'}, ${name} 👋`
     },
-    title: 'Was brauchst du?',
+    title: 'Was brauchen Sie?',
     easyTitle: '„Was möchten Sie gebracht bekommen?"',
     easySub: 'Beschreiben Sie es einfach - unser Assistent erledigt den Rest.',
     manualTitle: 'Lieferung schrittweise manuell erstellen',
-    switchToEasy: 'Einfacher Modus',
-    switchToStandard: 'Standard-Modus',
+    switchToEasy: 'Großschrift aktivieren',
+    switchToStandard: 'Zurück zu Standard',
     ctaTitle: 'Lieferung erstellen',
-    ctaSub: 'Ein verifizierter Student holt es ab und bringt es zu dir.',
+    ctaSub: 'Ein verifizierter Student holt es ab und bringt es zu Ihnen.',
     areaLabel: 'Gebiet', deliveryLabel: 'Ø Lieferzeit',
-    ordersTitle: 'Deine Aufträge',
-    emptyTitle: 'Noch keine Aufträge', emptySub: 'Deine Lieferungen werden hier angezeigt',
+    ordersTitle: 'Ihre Aufträge',
+    emptyTitle: 'Noch keine Aufträge', emptySub: 'Ihre Lieferungen werden hier angezeigt',
     activeOrderTitle: 'Aktive Lieferung', trackBtn: 'Verfolgen',
     historyTitle: 'Abgeschlossene Aufträge',
     switchRole: 'Rolle wechseln', logout: 'Abmelden',
@@ -38,8 +38,8 @@ const tr = {
     easyTitle: '"What would you like brought to you?"',
     easySub: 'Describe it in your own words - our assistant takes care of the rest.',
     manualTitle: 'Create order step by step',
-    switchToEasy: 'Easy Mode',
-    switchToStandard: 'Standard Mode',
+    switchToEasy: 'Enable Large Print',
+    switchToStandard: 'Back to Standard',
     ctaTitle: 'Create a delivery',
     ctaSub: 'A verified student picks it up and brings it to you.',
     areaLabel: 'Area', deliveryLabel: 'Avg. delivery',
@@ -89,6 +89,10 @@ export default function CustomerHomePage() {
   const { firstName = 'there' } = (location.state as { firstName?: string } | null) ?? session
   const [mode, setMode] = useState<'standard' | 'easy'>(session.mode ?? 'standard')
   const isEasyMode = mode === 'easy'
+
+  useEffect(() => {
+    document.documentElement.style.fontSize = mode === 'easy' ? '115%' : '100%'
+  }, [mode])
 
   const toggleMode = () => {
     const next = mode === 'easy' ? 'standard' : 'easy'
@@ -184,7 +188,7 @@ export default function CustomerHomePage() {
           <div className="mb-4 space-y-3">
             {/* Primary CTA — always the big green card */}
             <button
-              onClick={() => navigate(isEasyMode ? '/easy-order' : '/easy-order', { state: { firstName } })}
+              onClick={() => navigate('/easy-order', { state: { firstName } })}
               className="w-full text-left rounded-2xl p-6 group transition-all duration-200 hover:shadow-lg active:scale-[0.99]"
               style={{ background: 'linear-gradient(135deg, #14532d 0%, #166534 50%, #16a34a 100%)' }}
             >
@@ -198,7 +202,7 @@ export default function CustomerHomePage() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
                 </svg>
               </div>
-              <h2 className={`font-bold text-white mb-1 ${isEasyMode ? 'text-2xl' : 'text-xl'}`}>{t.easyTitle}</h2>
+              <h2 className="text-xl font-bold text-white mb-1">{t.easyTitle}</h2>
               <p className="text-white/60 text-sm">{t.easySub}</p>
             </button>
 
@@ -207,15 +211,7 @@ export default function CustomerHomePage() {
               {lang === 'de' ? 'oder' : 'or'}
             </p>
 
-            {/* Manual option — secondary (small link in easy mode, full button in standard) */}
-            {isEasyMode ? (
-              <button
-                onClick={() => navigate('/create-delivery', { state: { firstName } })}
-                className="w-full text-center text-sm text-gray-400 hover:text-gray-600 transition-colors py-1"
-              >
-                {t.manualTitle} →
-              </button>
-            ) : (
+            {/* Manual option — always shown as full card */}
             <button
               onClick={() => navigate('/create-delivery', { state: { firstName } })}
               className="w-full text-left rounded-2xl px-5 py-4 bg-white border border-gray-200 flex items-center justify-between group hover:border-gray-300 hover:shadow-sm transition-all active:scale-[0.99]"
@@ -232,7 +228,6 @@ export default function CustomerHomePage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
               </svg>
             </button>
-            )}
           </div>
         )}
 
