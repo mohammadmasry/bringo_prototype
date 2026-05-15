@@ -12,6 +12,23 @@ interface ChatMsg {
 
 const PRICES: Record<'S' | 'M' | 'L', number> = { S: 3.2, M: 4.5, L: 5.8 }
 
+const CATEGORIES = {
+  de: [
+    { emoji: '💊', label: 'Medikamente', prompt: 'Ich brauche Medikamente von der Apotheke.' },
+    { emoji: '🛒', label: 'Einkäufe', prompt: 'Ich brauche Einkäufe vom Supermarkt.' },
+    { emoji: '🍕', label: 'Essen', prompt: 'Ich möchte Essen vom Restaurant geliefert bekommen.' },
+    { emoji: '📦', label: 'Paket', prompt: 'Ich habe ein Paket, das abgeholt werden soll.' },
+    { emoji: '📋', label: 'Dokumente', prompt: 'Ich brauche Dokumente abgeholt.' },
+  ],
+  en: [
+    { emoji: '💊', label: 'Medicine', prompt: 'I need medicine from the pharmacy.' },
+    { emoji: '🛒', label: 'Groceries', prompt: 'I need groceries from the supermarket.' },
+    { emoji: '🍕', label: 'Food', prompt: 'I want food delivered from a restaurant.' },
+    { emoji: '📦', label: 'Package', prompt: 'I have a package that needs to be picked up.' },
+    { emoji: '📋', label: 'Documents', prompt: 'I need documents picked up.' },
+  ],
+}
+
 const tr = {
   de: {
     back: 'Zurück',
@@ -24,6 +41,7 @@ const tr = {
     dropoff: 'Zielort',
     price: 'Preis',
     manualLink: 'Lieber selbst ausfüllen?',
+    categoryHint: 'Oder wählen Sie eine Kategorie:',
     welcome: 'Hallo! 👋 Ich bin Ihr Bringo-Assistent.\n\nSagen Sie mir einfach, was abgeholt und wohin geliefert werden soll — zum Beispiel:\n\n„Medikamente von der Apotheke am Stadtplatz zu mir nach Hause, Ludwigstraße 8"',
   },
   en: {
@@ -37,6 +55,7 @@ const tr = {
     dropoff: 'Dropoff',
     price: 'Price',
     manualLink: 'Prefer to fill in the form yourself?',
+    categoryHint: 'Or choose a category:',
     welcome: "Hello! 👋 I'm your Bringo assistant.\n\nJust tell me what needs to be picked up and where it should be delivered — for example:\n\n\"Pick up medicine from the pharmacy at Stadtplatz and bring it to me at Ludwigstraße 8\"",
   },
 }
@@ -180,6 +199,25 @@ export default function EasyOrderPage() {
         {isLoading && <TypingDots />}
         <div ref={bottomRef} />
       </div>
+
+      {/* Category chips — shown only before user sends first message */}
+      {messages.length === 1 && (
+        <div className="shrink-0 px-5 pb-3 max-w-xl mx-auto w-full">
+          <p className="text-sm text-gray-400 mb-2">{t.categoryHint}</p>
+          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+            {CATEGORIES[lang].map((cat) => (
+              <button
+                key={cat.label}
+                onClick={() => setInput(cat.prompt)}
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl border border-gray-200 bg-white text-gray-700 text-base font-medium whitespace-nowrap hover:border-green-400 hover:text-green-700 hover:bg-green-50 transition-colors shrink-0"
+              >
+                <span className="text-xl">{cat.emoji}</span>
+                {cat.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Input area */}
       <div className="shrink-0 bg-white border-t border-gray-100 px-5 py-4 max-w-xl mx-auto w-full">
