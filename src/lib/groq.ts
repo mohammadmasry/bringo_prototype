@@ -35,6 +35,38 @@ Rules:
 - Keep answers to 1–2 sentences unless a detailed explanation is needed
 - Be warm, helpful, and concise`
 
+export async function analyzeImage(base64: string, mimeType: string): Promise<string> {
+  const apiKey = import.meta.env.VITE_GROQ_API_KEY
+  if (!apiKey || apiKey === 'your_groq_api_key_here') {
+    return 'Einkaufszettel-Analyse nicht konfiguriert (Groq API Key fehlt).'
+  }
+  try {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+        messages: [{
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: 'This is a photo of a shopping list or products. List all visible items clearly. If the text is German, reply in German; otherwise reply in English. Just list the items, one per line, no extra commentary.',
+            },
+            { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64}` } },
+          ],
+        }],
+        max_tokens: 400,
+      }),
+    })
+    if (!res.ok) return 'Bild konnte nicht analysiert werden.'
+    const data = await res.json()
+    return data.choices?.[0]?.message?.content ?? 'Keine Elemente erkannt.'
+  } catch {
+    return 'Verbindungsfehler beim Analysieren des Bildes.'
+  }
+}
+
 export async function askGroq(
   messages: GroqMessage[]
 ): Promise<{ text: string; order: DetectedOrder | null }> {

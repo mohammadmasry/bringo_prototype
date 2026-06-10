@@ -3,8 +3,9 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import LangToggle from '../components/LangToggle'
 import ChatWidget from '../components/ChatWidget'
 import { useLang } from '../hooks/useLang'
-import { getSession, setSession, clearSession } from '../lib/session'
+import { getSession, setSession, clearSession, getToken } from '../lib/session'
 import { getActiveOrder, getOrderHistory, type StoredOrder } from '../lib/orderStore'
+import { api } from '../lib/api'
 
 const tr = {
   de: {
@@ -104,13 +105,23 @@ export default function CustomerHomePage() {
   const t = tr[lang]
   const [showMenu, setShowMenu] = useState(false)
   const [activeOrder, setActiveOrderState] = useState<StoredOrder | null>(() => getActiveOrder())
-  const history = getOrderHistory()
+  const [history, setHistory] = useState<StoredOrder[]>(() => getOrderHistory())
 
   useEffect(() => {
     const tick = () => setActiveOrderState(getActiveOrder())
     const id = setInterval(tick, 2000)
     window.addEventListener('storage', tick)
     return () => { clearInterval(id); window.removeEventListener('storage', tick) }
+  }, [])
+
+  // Load real order history from backend if logged in
+  useEffect(() => {
+    if (!getToken()) return
+    api.orders.getHistory().then((orders) => {
+      setHistory(orders as StoredOrder[])
+    }).catch(() => {
+      setHistory(getOrderHistory())
+    })
   }, [])
 
   return (

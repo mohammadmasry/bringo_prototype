@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import LangToggle from '../components/LangToggle'
 import { useLang } from '../hooks/useLang'
-import { clearSession } from '../lib/session'
+import { clearSession, setSession, setToken } from '../lib/session'
+import { api } from '../lib/api'
+import ComingSoonSheet from '../components/ComingSoonSheet'
 
 type SurveyLang = 'en' | 'de'
 type TextSize = 'normal' | 'large' | 'xl'
@@ -13,8 +15,13 @@ const translations = {
     h1: 'Anmelden',
     h2: 'oder beitreten.',
     subtitle: 'Lokale Lieferungen von verifizierten Studierenden.',
-    phoneLabel: 'Deutsche Handynummer',
-    continue: 'Weiter',
+    emailLabel: 'E-Mail oder Benutzername',
+    emailPh: 'name@beispiel.de',
+    passwordLabel: 'Passwort',
+    passwordPh: '••••••••',
+    loginSubmit: 'Anmelden',
+    noAccount: 'Noch kein Konto?',
+    registerLink: 'Jetzt registrieren',
     leftH1a: 'Lokale Lieferungen',
     leftH1b: 'von verifizierten',
     leftH1c: 'Studierenden.',
@@ -27,11 +34,16 @@ const translations = {
   },
   en: {
     badge: 'Now live in Germany',
-    h1: 'Login',
+    h1: 'Log in',
     h2: 'or join.',
     subtitle: 'Local deliveries by verified students.',
-    phoneLabel: 'German phone number',
-    continue: 'Continue',
+    emailLabel: 'Email or username',
+    emailPh: 'name@example.com',
+    passwordLabel: 'Password',
+    passwordPh: '••••••••',
+    loginSubmit: 'Log in',
+    noAccount: "Don't have an account yet?",
+    registerLink: 'Register now',
     leftH1a: 'Local deliveries',
     leftH1b: 'by verified',
     leftH1c: 'students.',
@@ -48,13 +60,18 @@ const surveyQuestions = {
   en: [
     {
       emoji: '👤',
-      question: 'Who are you?',
-      multi: false,
+      question: 'Who are you ordering for?',
+      multi: true,
       options: [
-        'I am under 70 and would like to place an order for myself',
-        'I am 70 or over and would like to place an order for myself',
-        'I am a relative / carer and would like to book the service for someone else',
+        'For myself',
+        'For someone else',
       ],
+    },
+    {
+      emoji: '🎂',
+      question: 'What is your age group?',
+      multi: false,
+      options: ['Under 18', '18 – 25', '26 – 35', '36 – 50', '51 – 70', '70+'],
     },
     {
       emoji: '🎓',
@@ -66,7 +83,7 @@ const surveyQuestions = {
       emoji: '💳',
       question: 'Which payment method would you prefer?',
       multi: true,
-      options: ['Cash on delivery', 'SEPA Direct Debit', 'PayPal', 'Credit card', 'Other'],
+      options: ['Cash on delivery', 'EC card payment on delivery', 'SEPA Direct Debit', 'PayPal', 'Credit card', 'Other'],
     },
     {
       emoji: '📅',
@@ -116,13 +133,18 @@ const surveyQuestions = {
   de: [
     {
       emoji: '👤',
-      question: 'Wer sind Sie?',
-      multi: false,
+      question: 'Für wen bestellen Sie?',
+      multi: true,
       options: [
-        'Ich bin unter 70 Jahre alt und möchte für mich bestellen',
-        'Ich bin 70 Jahre oder älter und möchte für mich bestellen',
-        'Ich bin Angehörige / Pflegende und würde den Service für andere buchen',
+        'Für mich selbst',
+        'Für jemand anderen',
       ],
+    },
+    {
+      emoji: '🎂',
+      question: 'Welcher Altersgruppe gehören Sie an?',
+      multi: false,
+      options: ['Unter 18', '18 – 25', '26 – 35', '36 – 50', '51 – 70', '70+'],
     },
     {
       emoji: '🎓',
@@ -134,7 +156,7 @@ const surveyQuestions = {
       emoji: '💳',
       question: 'Welche Zahlungsart würden Sie bevorzugen?',
       multi: true,
-      options: ['Barzahlung bei Übergabe', 'SEPA-Lastschrift', 'PayPal', 'Kreditkarte', 'Andere'],
+      options: ['Barzahlung bei Übergabe', 'EC-Kartenzahlung bei Übergabe', 'SEPA-Lastschrift', 'PayPal', 'Kreditkarte', 'Andere'],
     },
     {
       emoji: '📅',
@@ -183,7 +205,8 @@ const surveyQuestions = {
   ],
 }
 
-function OnboardingFlow({ onFinish }: { onFinish: () => void }) {
+function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => void }) {
+  const navigate = useNavigate()
   const [step, setStep] = useState(0)
   const [surveyLang, setSurveyLang] = useState<SurveyLang>('de')
   const [textSize, setTextSize] = useState<TextSize>('large')
@@ -207,10 +230,11 @@ function OnboardingFlow({ onFinish }: { onFinish: () => void }) {
       desc:
         'Bringo connects people who need help with local errands to verified student couriers nearby.\n\nBefore you sign up, we would like to ask a few quick questions so we can improve the service for real users.',
       groceries: 'Groceries',
-      pharmacy: 'Pharmacy',
+      pharmacy: 'Deliveries',
       errands: 'Errands',
       start: 'Start survey →',
       skip: 'Skip and go to sign up',
+      login: 'Log in',
       languageTitle: 'Choose your language',
       languageSub: 'Wählen Sie Ihre Sprache aus.',
       privacy: 'Your answers are anonymous and used only to improve Bringo.',
@@ -230,10 +254,11 @@ function OnboardingFlow({ onFinish }: { onFinish: () => void }) {
       desc:
         'Bringo verbindet Menschen, die Hilfe bei lokalen Besorgungen brauchen, mit verifizierten studentischen Kurieren in der Nähe.\n\nBevor Sie sich anmelden, möchten wir ein paar kurze Fragen stellen, damit wir den Service verbessern können.',
       groceries: 'Einkäufe',
-      pharmacy: 'Apotheke',
+      pharmacy: 'Lieferungen',
       errands: 'Besorgungen',
       start: 'Umfrage starten →',
-      skip: 'Überspringen und direkt zur Anmeldung',
+      skip: 'Überspringen und direkt zur Bestellung',
+      login: 'Anmelden',
       languageTitle: 'Sprache auswählen',
       languageSub: 'Choose your language.',
       privacy: 'Ihre Antworten sind anonym und werden nur zur Verbesserung von Bringo genutzt.',
@@ -330,12 +355,28 @@ function OnboardingFlow({ onFinish }: { onFinish: () => void }) {
           </div>
         </div>
 
-        <p className="relative z-10 text-white/20 text-xs">© 2026 Bringo · Germany</p>
+        <div className="relative z-10 flex flex-col gap-2">
+          <button onClick={() => window.location.href = '/partner'}
+            className="flex items-center gap-2 text-white/50 hover:text-white transition-colors text-sm group w-fit">
+            <span>🏪</span>
+            <span className="font-medium group-hover:underline underline-offset-2">
+              {surveyLang === 'de' ? 'Für Geschäftspartner' : 'For business partners'}
+            </span>
+          </button>
+          <button onClick={() => window.location.href = '/courier-login'}
+            className="flex items-center gap-2 text-white/50 hover:text-white transition-colors text-sm group w-fit">
+            <span>🚴</span>
+            <span className="font-medium group-hover:underline underline-offset-2">
+              {surveyLang === 'de' ? 'Als Kurier arbeiten' : 'Work as a courier'}
+            </span>
+          </button>
+          <p className="text-white/20 text-xs mt-1">© 2026 Bringo · Germany</p>
+        </div>
       </div>
 
       <div className="flex-1 bg-white min-h-screen flex items-center justify-center px-6 py-10">
         <div className="w-full max-w-[520px]">
-          <div className="flex justify-end mb-8">
+          <div className="flex items-center justify-end gap-3 mb-8">
             <div className="inline-flex items-center bg-gray-100 rounded-full p-1 shadow-sm">
               <button
                 onClick={() => setSurveyLang('de')}
@@ -354,6 +395,12 @@ function OnboardingFlow({ onFinish }: { onFinish: () => void }) {
                 🇬🇧 EN
               </button>
             </div>
+            <button
+              onClick={onLogin}
+              className="px-5 py-2 rounded-full font-semibold text-sm border-2 border-green-600 text-green-700 hover:bg-green-50 transition-colors"
+            >
+              {intro.login}
+            </button>
           </div>
 
           {step === 0 && (
@@ -380,7 +427,7 @@ function OnboardingFlow({ onFinish }: { onFinish: () => void }) {
                   <p className="text-sm font-semibold text-green-800">{intro.groceries}</p>
                 </div>
                 <div className="rounded-2xl bg-green-50 border border-green-100 p-4 text-center">
-                  <div className="text-2xl mb-1">💊</div>
+                  <div className="text-2xl mb-1">📦</div>
                   <p className="text-sm font-semibold text-green-800">{intro.pharmacy}</p>
                 </div>
                 <div className="rounded-2xl bg-green-50 border border-green-100 p-4 text-center">
@@ -390,7 +437,7 @@ function OnboardingFlow({ onFinish }: { onFinish: () => void }) {
               </div>
 
               <button
-                onClick={() => setStep(1)}
+                onClick={() => setStep(2)}
                 className="w-full py-4 rounded-xl font-semibold text-white text-base"
                 style={{
                   background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
@@ -400,36 +447,12 @@ function OnboardingFlow({ onFinish }: { onFinish: () => void }) {
                 {intro.start}
               </button>
 
-              <button onClick={onFinish} className="w-full text-green-700 underline font-medium">
+              <button onClick={() => setStep(5)} className="w-full text-gray-400 text-sm font-medium hover:text-gray-600 transition-colors">
                 {intro.skip}
               </button>
             </div>
           )}
 
-          {step === 1 && (
-            <div className="space-y-6">
-              <h2 className="text-4xl font-black text-gray-900">{intro.languageTitle}</h2>
-              <p className="text-gray-500 text-lg">{intro.languageSub}</p>
-
-              <button
-                onClick={() => { setSurveyLang('de'); setStep(2) }}
-                className="w-full flex items-center justify-between border border-gray-200 rounded-2xl p-5 hover:bg-green-50 hover:border-green-200 transition"
-              >
-                <span className="font-bold text-xl">🇩🇪 Deutsch</span>
-                <span>→</span>
-              </button>
-
-              <button
-                onClick={() => { setSurveyLang('en'); setStep(2) }}
-                className="w-full flex items-center justify-between border border-gray-200 rounded-2xl p-5 hover:bg-green-50 hover:border-green-200 transition"
-              >
-                <span className="font-bold text-xl">🇬🇧 English</span>
-                <span>→</span>
-              </button>
-
-              <p className="text-sm text-gray-400">🔒 {intro.privacy}</p>
-            </div>
-          )}
 
           {step === 2 && (
             <div className="space-y-6">
@@ -544,15 +567,26 @@ function OnboardingFlow({ onFinish }: { onFinish: () => void }) {
                 </button>
 
                 <button
-                  onClick={() => questionIndex === surveyQuestions[surveyLang].length - 1 ? setStep(4) : setQuestionIndex(questionIndex + 1)}
+                  onClick={() => {
+                    if (questionIndex === surveyQuestions[surveyLang].length - 1) {
+                      // Fire-and-forget survey submission
+                      api.surveys.create({
+                        lang: surveyLang,
+                        answers: answers as Record<string, unknown>,
+                      }).catch(console.error)
+                      setStep(4)
+                    } else {
+                      setQuestionIndex(questionIndex + 1)
+                    }
+                  }}
                   className="w-1/2 bg-green-600 text-white py-3 rounded-xl font-semibold"
                 >
                   {surveyLang === 'de' ? 'Weiter' : 'Next'}
                 </button>
               </div>
 
-              <button onClick={onFinish} className="w-full text-green-700 underline font-medium">
-                {surveyLang === 'de' ? 'Überspringen und direkt zur Anmeldung' : 'Skip and go to sign up'}
+              <button onClick={() => setStep(5)} className="w-full text-green-700 underline font-medium">
+                {surveyLang === 'de' ? 'Überspringen und direkt zur Bestellung' : 'Skip and go to order'}
               </button>
             </div>
           )}
@@ -569,14 +603,73 @@ function OnboardingFlow({ onFinish }: { onFinish: () => void }) {
                   : 'Your feedback helps us improve Bringo and understand what users need.'}
               </p>
               <button
-                onClick={onFinish}
+                onClick={() => setStep(5)}
                 className="w-full py-4 rounded-xl font-semibold text-white"
                 style={{
                   background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
                   boxShadow: '0 4px 16px rgba(22,163,74,0.35)',
                 }}
               >
-                {surveyLang === 'de' ? 'Weiter zur Anmeldung →' : 'Continue to sign up →'}
+                {surveyLang === 'de' ? 'Weiter zur Bestellung →' : 'Continue to order →'}
+              </button>
+            </div>
+          )}
+
+          {step === 5 && (
+            <div className="space-y-6 animate-fade-in-up">
+              <div>
+                <h2 className="text-4xl font-black text-gray-900 mb-2">
+                  {surveyLang === 'de' ? 'Was möchten Sie bestellen?' : 'What would you like to order?'}
+                </h2>
+                <p className="text-gray-400 text-base">
+                  {surveyLang === 'de' ? 'Wählen Sie eine Option:' : 'Choose an option:'}
+                </p>
+              </div>
+
+              <button
+                onClick={() => navigate('/easy-order')}
+                className="w-full flex items-center gap-5 border-2 rounded-2xl p-5 text-left transition-all hover:border-green-500 hover:bg-green-50 group"
+                style={{ borderColor: '#e5e7eb' }}
+              >
+                <div className="w-14 h-14 rounded-2xl bg-green-50 group-hover:bg-green-100 flex items-center justify-center text-3xl shrink-0 transition-colors">
+                  🛒
+                </div>
+                <div className="flex-1">
+                  <p className="font-black text-gray-900 text-lg leading-tight group-hover:text-green-700 transition-colors">
+                    {surveyLang === 'de' ? 'Einkauf & Besorgungen' : 'Shopping & Errands'}
+                  </p>
+                  <p className="text-gray-400 text-sm mt-0.5">
+                    {surveyLang === 'de'
+                      ? 'Lebensmittel, Apotheke, Restaurant & mehr'
+                      : 'Groceries, pharmacy, restaurant & more'}
+                  </p>
+                </div>
+                <svg className="w-5 h-5 text-gray-300 group-hover:text-green-500 transition-colors shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                </svg>
+              </button>
+
+              <button
+                onClick={() => navigate('/create-delivery')}
+                className="w-full flex items-center gap-5 border-2 rounded-2xl p-5 text-left transition-all hover:border-green-500 hover:bg-green-50 group"
+                style={{ borderColor: '#e5e7eb' }}
+              >
+                <div className="w-14 h-14 rounded-2xl bg-green-50 group-hover:bg-green-100 flex items-center justify-center text-3xl shrink-0 transition-colors">
+                  📦
+                </div>
+                <div className="flex-1">
+                  <p className="font-black text-gray-900 text-lg leading-tight group-hover:text-green-700 transition-colors">
+                    {surveyLang === 'de' ? 'Abholung & Lieferung' : 'Pickup & Delivery'}
+                  </p>
+                  <p className="text-gray-400 text-sm mt-0.5">
+                    {surveyLang === 'de'
+                      ? 'Pakete, Dokumente, persönliche Gegenstände'
+                      : 'Packages, documents, personal items'}
+                  </p>
+                </div>
+                <svg className="w-5 h-5 text-gray-300 group-hover:text-green-500 transition-colors shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                </svg>
               </button>
             </div>
           )}
@@ -586,15 +679,6 @@ function OnboardingFlow({ onFinish }: { onFinish: () => void }) {
   )
 }
 
-function formatPhone(value: string): string {
-  let digits = value.replace(/\D/g, '')
-  if (digits.startsWith('49')) digits = digits.slice(2)
-  else if (digits.startsWith('0')) digits = digits.slice(1)
-  digits = digits.slice(0, 11)
-  if (digits.length <= 3) return digits
-  if (digits.length <= 7) return `${digits.slice(0, 3)} ${digits.slice(3)}`
-  return `${digits.slice(0, 3)} ${digits.slice(3, 7)} ${digits.slice(7)}`
-}
 
 function MockOrderCard({ activeLabel }: { activeLabel: string }) {
   return (
@@ -677,23 +761,47 @@ function FeaturePill({ icon, text }: { icon: React.ReactNode; text: string }) {
 
 export default function LoginPage() {
   const { lang } = useLang()
-  const [phone, setPhone] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [showOnboarding, setShowOnboarding] = useState(true)
+  const [loading, setLoading] = useState(false)
+  const [apiError, setApiError] = useState<string | null>(null)
   const navigate = useNavigate()
 
   useEffect(() => { clearSession() }, [])
 
   const tr = translations[lang]
-  const digits = phone.replace(/\s/g, '')
-  const isValid = digits.length >= 9
+  const isValid = email.trim().length > 0 && password.length > 0
 
-  const handleContinue = () => {
-    if (isValid) navigate('/otp', { state: { phone: `+49 ${phone}`, lang } })
+  const handleLogin = async () => {
+    if (!isValid || loading) return
+    setApiError(null)
+    setLoading(true)
+    try {
+      const result = await api.auth.login({ email: email.trim(), password })
+      setToken(result.token)
+      setSession({ role: 'customer', mode: 'standard', firstName: result.user.firstName })
+      navigate('/home/customer')
+    } catch (err) {
+      setApiError(err instanceof Error ? err.message : 'Login failed')
+    } finally {
+      setLoading(false)
+    }
   }
 
   if (showOnboarding) {
-    return <OnboardingFlow onFinish={() => setShowOnboarding(false)} />
+    return (
+      <OnboardingFlow
+        onFinish={() => navigate('/create-delivery')}
+        onLogin={() => setShowOnboarding(false)}
+      />
+    )
   }
+
+  // Login form is a data-collection feature — show coming soon sheet instead
+  return <ComingSoonSheet onBack={() => setShowOnboarding(true)} />
+
+  const handleBack = () => setShowOnboarding(true)
 
   return (
     <div className="min-h-screen flex">
@@ -773,6 +881,14 @@ export default function LoginPage() {
 
       <div className="flex-1 flex flex-col bg-white min-h-screen relative">
         <div className="flex items-center justify-between px-6 pt-6 md:px-8 md:pt-7">
+          <button
+            onClick={handleBack}
+            className="w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors shrink-0"
+          >
+            <svg className="w-4 h-4 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+            </svg>
+          </button>
           <div className="md:hidden flex items-center gap-2.5">
             <div
               className="w-8 h-8 rounded-lg flex items-center justify-center"
@@ -784,7 +900,6 @@ export default function LoginPage() {
             </div>
             <span className="text-xl font-bold text-gray-900">bringo</span>
           </div>
-          <div className="hidden md:block" />
           <LangToggle />
         </div>
 
@@ -807,58 +922,79 @@ export default function LoginPage() {
             </h1>
             <p className="text-gray-400 text-xl leading-relaxed mb-10">{tr.subtitle}</p>
 
-            <div className="mb-4">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                {tr.phoneLabel}
-              </label>
-              <div
-                className="flex items-stretch rounded-xl overflow-hidden transition-all duration-200"
-                style={{
-                  border: '2px solid',
-                  borderColor: phone.length > 0 ? '#16a34a' : '#e5e7eb',
-                  boxShadow:
-                    phone.length > 0 ? '0 0 0 4px rgba(22,163,74,0.08)' : 'none',
-                }}
-              >
-                <div className="flex items-center gap-2 px-4 py-4 bg-gray-50 border-r-2 border-gray-200 shrink-0">
-                  <span className="text-lg">🇩🇪</span>
-                  <span className="text-sm font-bold text-gray-600">+49</span>
-                </div>
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">{tr.emailLabel}</label>
                 <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(formatPhone(e.target.value))}
-                  onKeyDown={(e) => e.key === 'Enter' && handleContinue()}
-                  placeholder="151 234 56789"
-                  className="flex-1 px-4 py-4 outline-none text-gray-900 placeholder-gray-300 text-base font-medium bg-white"
-                  autoComplete="tel"
+                  type="email"
+                  value={email}
+                  autoFocus
+                  onChange={(e) => setEmail(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+                  placeholder={tr.emailPh}
+                  autoComplete="email"
+                  className="w-full px-4 py-4 rounded-xl border-2 outline-none text-gray-900 placeholder-gray-300 text-base font-medium bg-white transition-colors"
+                  style={{
+                    borderColor: email.length > 0 ? '#16a34a' : '#e5e7eb',
+                    boxShadow: email.length > 0 ? '0 0 0 4px rgba(22,163,74,0.08)' : 'none',
+                  }}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">{tr.passwordLabel}</label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+                  placeholder={tr.passwordPh}
+                  autoComplete="current-password"
+                  className="w-full px-4 py-4 rounded-xl border-2 outline-none text-gray-900 placeholder-gray-300 text-base font-medium bg-white transition-colors"
+                  style={{
+                    borderColor: password.length > 0 ? '#16a34a' : '#e5e7eb',
+                    boxShadow: password.length > 0 ? '0 0 0 4px rgba(22,163,74,0.08)' : 'none',
+                  }}
                 />
               </div>
             </div>
 
             <button
-              onClick={handleContinue}
-              disabled={!isValid}
-              className="w-full py-4 rounded-xl font-semibold text-base flex items-center justify-center gap-2 group transition-all duration-200 mb-5"
+              onClick={handleLogin}
+              disabled={!isValid || loading}
+              className="w-full py-4 rounded-xl font-semibold text-base flex items-center justify-center gap-2 group transition-all duration-200 mb-4"
               style={{
-                background: isValid
+                background: isValid && !loading
                   ? 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)'
                   : '#f3f4f6',
-                color: isValid ? 'white' : '#9ca3af',
-                boxShadow: isValid ? '0 4px 16px rgba(22,163,74,0.35)' : 'none',
+                color: isValid && !loading ? 'white' : '#9ca3af',
+                boxShadow: isValid && !loading ? '0 4px 16px rgba(22,163,74,0.35)' : 'none',
               }}
             >
-              {tr.continue}
-              <svg
-                className="w-4 h-4 transition-transform group-hover:translate-x-0.5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2.5}
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-              </svg>
+              {loading ? (lang === 'de' ? 'Bitte warten…' : 'Please wait…') : tr.loginSubmit}
+              {!loading && (
+                <svg
+                  className="w-4 h-4 transition-transform group-hover:translate-x-0.5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2.5}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                </svg>
+              )}
             </button>
+
+            {apiError && <p className="text-red-500 text-sm text-center mb-4">{apiError}</p>}
+
+            <p className="text-center text-sm text-gray-500 mb-5">
+              {tr.noAccount}{' '}
+              <button
+                onClick={() => navigate('/register')}
+                className="font-semibold text-green-700 hover:text-green-800 transition-colors underline underline-offset-2"
+              >
+                {tr.registerLink}
+              </button>
+            </p>
 
             <p className="text-center text-xs text-gray-400 leading-relaxed">
               {lang === 'de' ? (

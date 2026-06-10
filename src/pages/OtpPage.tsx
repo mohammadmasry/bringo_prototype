@@ -4,6 +4,8 @@ import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from 'fi
 import { auth } from '../lib/firebase'
 import BringoLogo from '../components/BringoLogo'
 import { useLang } from '../hooks/useLang'
+import { setActiveOrder, type StoredOrder } from '../lib/orderStore'
+import { setSession } from '../lib/session'
 
 const tr = {
   de: {
@@ -126,8 +128,12 @@ export default function OtpPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const { lang } = useLang()
-  const state = (location.state as { phone?: string } | null) ?? {}
+  const state = (location.state as { phone?: string; redirect?: string; firstName?: string; order?: StoredOrder; mode?: 'login' | 'register' } | null) ?? {}
   const phone = state.phone ?? ''
+  const redirect = state.redirect
+  const pendingOrder = state.order
+  const pendingFirstName = state.firstName ?? ''
+  const authMode = state.mode
   const t = tr[lang]
 
   // redirect if no phone
@@ -175,8 +181,23 @@ export default function OtpPage() {
 
   const handleVerify = async () => {
     if (code.length !== 6 || loading) return
+
+    const completeAuth = () => {
+      if (redirect && pendingOrder) {
+        if (authMode === 'register') {
+          navigate(redirect, { state: { pendingOrder, phone } })
+        } else {
+          setActiveOrder(pendingOrder)
+          setSession({ role: 'customer', mode: 'standard', firstName: pendingFirstName })
+          navigate(redirect, { state: { firstName: pendingFirstName } })
+        }
+      } else {
+        navigate('/welcome', { state: { phone, lang } })
+      }
+    }
+
     if (isMock) {
-      navigate('/welcome', { state: { phone, lang } })
+      completeAuth()
       return
     }
     if (!confirmation) return
@@ -184,7 +205,7 @@ export default function OtpPage() {
     setError('')
     try {
       await confirmation.confirm(code)
-      navigate('/welcome', { state: { phone, lang } })
+      completeAuth()
     } catch {
       setError(t.errCode)
       setCode('')

@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { useLang } from '../hooks/useLang'
 import { getSession } from '../lib/session'
 import { getActiveOrder, setActiveOrder, addToHistory, type StoredOrder } from '../lib/orderStore'
+import { api } from '../lib/api'
 
 const MOCK_COURIER = { name: 'Jonas M.', rating: 4.9, phone: '+49 151 234 56789', eta: '~12 min' }
 
@@ -24,6 +25,20 @@ const tr = {
     backHome: 'Zurück zur Startseite',
     orderRef: 'Auftrag',
     waitingForCourier: 'Warten auf Kurier…',
+    feedbackTitle: 'Wie war Ihre Erfahrung?',
+    feedbackSub: 'Helfen Sie uns, Bringo zu verbessern.',
+    starsLabel: ['Sehr schlecht', 'Schlecht', 'Ok', 'Gut', 'Sehr gut'],
+    likedLabel: 'Was hat Ihnen gefallen?',
+    likedPh: 'z.B. schnelle Lieferung, freundlicher Kurier…',
+    improveLabel: 'Was kann verbessert werden?',
+    improvePh: 'z.B. Preis, Kommunikation, App-Design…',
+    emailLabel: 'E-Mail für Rückmeldung',
+    emailPh: 'optional',
+    sendFeedback: 'Feedback absenden',
+    skipFeedback: 'Überspringen',
+    sending: 'Wird gesendet…',
+    thanksFeedback: 'Danke für Ihr Feedback! 🎉',
+    thanksFeedbackSub: 'Das hilft uns, Bringo besser zu machen.',
   },
   en: {
     searching: 'Finding your courier…',
@@ -42,6 +57,20 @@ const tr = {
     backHome: 'Back to home',
     orderRef: 'Order',
     waitingForCourier: 'Waiting for courier…',
+    feedbackTitle: 'How was your experience?',
+    feedbackSub: 'Help us improve Bringo.',
+    starsLabel: ['Very bad', 'Bad', 'Ok', 'Good', 'Very good'],
+    likedLabel: 'What did you like?',
+    likedPh: 'e.g. fast delivery, friendly courier…',
+    improveLabel: 'What could be improved?',
+    improvePh: 'e.g. price, communication, app design…',
+    emailLabel: 'Email for follow-up',
+    emailPh: 'optional',
+    sendFeedback: 'Send feedback',
+    skipFeedback: 'Skip',
+    sending: 'Sending…',
+    thanksFeedback: 'Thanks for your feedback! 🎉',
+    thanksFeedbackSub: 'This helps us make Bringo better.',
   },
 }
 
@@ -56,6 +85,25 @@ export default function CustomerActiveOrderPage() {
 
   const [order, setOrder] = useState<StoredOrder | null>(() => getActiveOrder())
   const [status, setStatus] = useState<Status>(() => getActiveOrder()?.status ?? 'searching')
+
+  // feedback state
+  const [fbStars, setFbStars] = useState(0)
+  const [fbHovered, setFbHovered] = useState(0)
+  const [fbLiked, setFbLiked] = useState('')
+  const [fbImprove, setFbImprove] = useState('')
+  const [fbEmail, setFbEmail] = useState('')
+  const [fbLoading, setFbLoading] = useState(false)
+  const [fbDone, setFbDone] = useState(false)
+
+  const submitFeedback = async () => {
+    if (fbLoading) return
+    setFbLoading(true)
+    try {
+      await api.feedback.submit({ stars: fbStars || 5, liked: fbLiked, improve: fbImprove, email: fbEmail, page: 'post-delivery' })
+    } catch { /* fire-and-forget */ }
+    setFbDone(true)
+    setFbLoading(false)
+  }
 
   // Redirect if no order exists
   useEffect(() => {
@@ -111,24 +159,123 @@ export default function CustomerActiveOrderPage() {
 
   if (status === 'delivered') {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center bg-white">
-        <div
-          className="w-20 h-20 rounded-full flex items-center justify-center mb-6"
-          style={{ background: 'linear-gradient(135deg, #f0fdf4, #dcfce7)' }}
-        >
-          <svg className="w-10 h-10 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-          </svg>
+      <div className="min-h-screen bg-white flex flex-col">
+        <div className="h-1.5 w-full" style={{ background: 'linear-gradient(90deg, #16a34a, #4ade80)' }} />
+
+        <div className="flex-1 flex flex-col px-6 max-w-lg mx-auto w-full pb-10 pt-8">
+          {/* Delivery confirmed header */}
+          <div className="text-center mb-8">
+            <div
+              className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4"
+              style={{ background: 'linear-gradient(135deg, #f0fdf4, #dcfce7)' }}
+            >
+              <svg className="w-10 h-10 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h1 className="text-4xl font-black text-gray-900 mb-2">{t.delivered}</h1>
+            <p className="text-gray-400 text-sm max-w-xs mx-auto leading-relaxed">{t.deliveredSub}</p>
+          </div>
+
+          {/* Feedback card */}
+          <div className="rounded-2xl border border-gray-100 p-6 mb-5" style={{ background: '#fafafa' }}>
+            {!fbDone ? (
+              <>
+                <h2 className="text-lg font-black text-gray-900 mb-1">{t.feedbackTitle}</h2>
+                <p className="text-gray-400 text-sm mb-5">{t.feedbackSub}</p>
+
+                {/* Stars */}
+                <div className="flex gap-2 justify-center mb-1">
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <button
+                      key={n}
+                      onClick={() => setFbStars(n)}
+                      onMouseEnter={() => setFbHovered(n)}
+                      onMouseLeave={() => setFbHovered(0)}
+                      className="text-3xl transition-transform hover:scale-110"
+                    >
+                      <span style={{ color: n <= (fbHovered || fbStars) ? '#facc15' : '#e5e7eb' }}>★</span>
+                    </button>
+                  ))}
+                </div>
+                {fbStars > 0 && (
+                  <p className="text-center text-xs font-semibold text-green-600 mb-5">
+                    {t.starsLabel[fbStars - 1]}
+                  </p>
+                )}
+                {fbStars === 0 && <div className="mb-5" />}
+
+                <div className="space-y-3 mb-5">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t.likedLabel}</label>
+                    <textarea
+                      value={fbLiked}
+                      onChange={(e) => setFbLiked(e.target.value)}
+                      placeholder={t.likedPh}
+                      rows={2}
+                      className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-green-500 outline-none text-gray-900 placeholder-gray-300 text-sm bg-white resize-none transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t.improveLabel}</label>
+                    <textarea
+                      value={fbImprove}
+                      onChange={(e) => setFbImprove(e.target.value)}
+                      placeholder={t.improvePh}
+                      rows={2}
+                      className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-green-500 outline-none text-gray-900 placeholder-gray-300 text-sm bg-white resize-none transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">{t.emailLabel}</label>
+                    <input
+                      type="email"
+                      value={fbEmail}
+                      onChange={(e) => setFbEmail(e.target.value)}
+                      placeholder={t.emailPh}
+                      className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-green-500 outline-none text-gray-900 placeholder-gray-300 text-sm bg-white transition-colors"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={submitFeedback}
+                    disabled={fbStars === 0 || fbLoading}
+                    className="flex-1 py-3.5 rounded-xl font-semibold text-sm transition-all duration-200"
+                    style={{
+                      background: fbStars > 0 && !fbLoading ? 'linear-gradient(135deg, #16a34a, #15803d)' : '#f3f4f6',
+                      color: fbStars > 0 && !fbLoading ? 'white' : '#9ca3af',
+                      boxShadow: fbStars > 0 && !fbLoading ? '0 4px 12px rgba(22,163,74,0.3)' : 'none',
+                    }}
+                  >
+                    {fbLoading ? t.sending : t.sendFeedback}
+                  </button>
+                  <button
+                    onClick={() => setFbDone(true)}
+                    className="px-5 py-3.5 rounded-xl font-semibold text-sm text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    {t.skipFeedback}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-4">
+                <div className="text-5xl mb-3">🎉</div>
+                <h3 className="text-xl font-black text-gray-900 mb-2">{t.thanksFeedback}</h3>
+                <p className="text-gray-400 text-sm">{t.thanksFeedbackSub}</p>
+              </div>
+            )}
+          </div>
+
+          <button
+            onClick={() => navigate('/home/customer', { state: { firstName } })}
+            className="w-full py-4 rounded-xl font-semibold text-base text-white transition-all duration-200"
+            style={{ background: 'linear-gradient(135deg, #16a34a, #15803d)', boxShadow: '0 4px 16px rgba(22,163,74,0.35)' }}
+          >
+            {t.backHome}
+          </button>
         </div>
-        <h1 className="text-4xl font-black text-gray-900 mb-3">{t.delivered}</h1>
-        <p className="text-gray-400 mb-8 max-w-xs leading-relaxed">{t.deliveredSub}</p>
-        <button
-          onClick={() => navigate('/home/customer', { state: { firstName } })}
-          className="px-8 py-4 rounded-xl font-semibold text-white"
-          style={{ background: 'linear-gradient(135deg, #16a34a, #15803d)', boxShadow: '0 4px 16px rgba(22,163,74,0.35)' }}
-        >
-          {t.backHome}
-        </button>
       </div>
     )
   }

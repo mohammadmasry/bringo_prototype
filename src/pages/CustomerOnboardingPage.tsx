@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import BringoLogo from '../components/BringoLogo'
 import LangToggle from '../components/LangToggle'
 import { useLang } from '../hooks/useLang'
 import { setSession } from '../lib/session'
+import { setActiveOrder, type StoredOrder } from '../lib/orderStore'
 
 type Mode = 'standard' | 'easy'
 
@@ -191,8 +192,10 @@ export default function CustomerOnboardingPage() {
   const [firstName, setFirstName] = useState('')
   const [mode, setMode] = useState<Mode>('standard')
   const navigate = useNavigate()
+  const location = useLocation()
   const { lang } = useLang()
   const t = tr[lang]
+  const locationState = location.state as { pendingOrder?: StoredOrder } | null
 
   const handleStep1 = () => {
     if (firstName.trim().length >= 2) setStep(2)
@@ -201,7 +204,12 @@ export default function CustomerOnboardingPage() {
   const handleFinish = () => {
     const name = firstName.trim()
     setSession({ firstName: name, role: 'customer', mode })
-    navigate('/home/customer', { state: { firstName: name } })
+    if (locationState?.pendingOrder) {
+      setActiveOrder(locationState.pendingOrder)
+      navigate('/active-order', { state: { firstName: name } })
+    } else {
+      navigate('/home/customer', { state: { firstName: name } })
+    }
   }
 
   return (

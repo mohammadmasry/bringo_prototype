@@ -1,0 +1,84 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  firstName    String
+  lastName     String
+  phone        String?
+  passwordHash String
+  role         String   @default("customer")
+  createdAt    DateTime @default(now())
+  orders       Order[]
+}
+
+model Order {
+  id             String        @id @default(cuid())
+  userId         String?
+  user           User?         @relation(fields: [userId], references: [id])
+  conversationId String?
+  conversation   Conversation? @relation(fields: [conversationId], references: [id])
+  pickup         String
+  dropoff        String
+  description    String
+  size           String
+  price          Float
+  note           String        @default("")
+  status         String        @default("searching")
+  createdAt      DateTime      @default(now())
+}
+
+model Conversation {
+  id        String                @id @default(cuid())
+  lang      String                @default("de")
+  messages  ConversationMessage[]
+  orders    Order[]
+  createdAt DateTime              @default(now())
+}
+
+model ConversationMessage {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  role           String
+  inputType      String       @default("text")
+  content        String
+  createdAt      DateTime     @default(now())
+}
+
+model Survey {
+  id        String   @id @default(cuid())
+  lang      String
+  answers   String
+  createdAt DateTime @default(now())
+}
+
+model PartnerApplication {
+  id            String   @id @default(cuid())
+  companyName   String
+  companyType   String
+  address       String
+  contactPerson String
+  email         String
+  phone         String
+  description   String   @default("")
+  status        String   @default("pending")
+  createdAt     DateTime @default(now())
+}
+
+model Feedback {
+  id        String   @id @default(cuid())
+  stars     Int
+  liked     String   @default("")
+  improve   String   @default("")
+  email     String   @default("")
+  page      String   @default("")
+  createdAt DateTime @default(now())
+}

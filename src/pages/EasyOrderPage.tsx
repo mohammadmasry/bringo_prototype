@@ -2,12 +2,14 @@ import { useState, useRef, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useLang } from '../hooks/useLang'
 import { getSession } from '../lib/session'
-import { askGroq, type DetectedOrder, type GroqMessage } from '../lib/groq'
+import { askGroq, analyzeImage, type DetectedOrder, type GroqMessage } from '../lib/groq'
+import { api } from '../lib/api'
 
 interface ChatMsg {
   role: 'user' | 'assistant'
   text: string
   order?: DetectedOrder | null
+  isImage?: boolean
 }
 
 const PRICES: Record<'S' | 'M' | 'L', number> = { S: 3.2, M: 4.5, L: 5.8 }
@@ -32,9 +34,7 @@ const CATEGORIES = {
 const tr = {
   de: {
     back: 'Zurück',
-    heading: 'Was darf ich für Sie tun?',
-    sub: 'Beschreiben Sie einfach, was Sie brauchen - ich erledige den Rest.',
-    placeholder: 'z.B. "Ich brauche Medikamente von der Apotheke…"',
+    placeholder: 'Tippen Sie Ihre Bestellung…',
     send: 'Senden',
     confirm: 'Ja, so bestellen →',
     pickup: 'Abholung',
@@ -42,13 +42,17 @@ const tr = {
     price: 'Preis',
     manualLink: 'Lieber selbst ausfüllen?',
     categoryHint: 'Oder wählen Sie eine Kategorie:',
-    welcome: 'Hallo! 👋 Ich bin Ihr Bringo-Assistent.\n\nSagen Sie mir einfach, was abgeholt und wohin geliefert werden soll — zum Beispiel:\n\n„Medikamente von der Apotheke am Stadtplatz zu mir nach Hause, Ludwigstraße 8"',
+    welcome: 'Was benötigen Sie?\n\nSie können eintippen, Ihren Einkaufszettel oder Produkte abfotografieren oder Ihre Bestellung einsprechen.',
+    analyzing: '🔍 Bild wird analysiert…',
+    photoPrefix: '📷 Foto-Einkaufszettel:\n',
+    voiceNotSupported: 'Sprachaufnahme wird von Ihrem Browser nicht unterstützt.',
+    listening: 'Höre zu…',
+    micStart: 'Bestellung einsprechen',
+    cameraLabel: 'Foto aufnehmen',
   },
   en: {
     back: 'Back',
-    heading: 'What can I help you with?',
-    sub: "Just describe what you need - I'll take care of the rest.",
-    placeholder: 'e.g. "I need medicine from the pharmacy…"',
+    placeholder: 'Type your order…',
     send: 'Send',
     confirm: 'Yes, place this order →',
     pickup: 'Pickup',
@@ -56,7 +60,13 @@ const tr = {
     price: 'Price',
     manualLink: 'Prefer to fill in the form yourself?',
     categoryHint: 'Or choose a category:',
-    welcome: "Hello! 👋 I'm your Bringo assistant.\n\nJust tell me what needs to be picked up and where it should be delivered — for example:\n\n\"Pick up medicine from the pharmacy at Stadtplatz and bring it to me at Ludwigstraße 8\"",
+    welcome: 'What do you need?\n\nYou can type, photograph your shopping list or products, or speak your order.',
+    analyzing: '🔍 Analysing image…',
+    photoPrefix: '📷 Photo shopping list:\n',
+    voiceNotSupported: 'Voice recording is not supported by your browser.',
+    listening: 'Listening…',
+    micStart: 'Speak your order',
+    cameraLabel: 'Take a photo',
   },
 }
 
@@ -64,11 +74,8 @@ function TypingDots() {
   return (
     <div className="flex items-center gap-2 px-5 py-4 bg-white rounded-2xl rounded-tl-sm border border-gray-100 self-start shadow-sm w-24">
       {[0, 1, 2].map((i) => (
-        <span
-          key={i}
-          className="w-3 h-3 rounded-full bg-gray-300 inline-block"
-          style={{ animation: `pulse 1.2s ease-in-out ${i * 0.2}s infinite` }}
-        />
+        <span key={i} className="w-3 h-3 rounded-full bg-gray-300 inline-block"
+          style={{ animation: `pulse 1.2s ease-in-out ${i * 0.2}s infinite` }} />
       ))}
     </div>
   )
@@ -86,46 +93,135 @@ export default function EasyOrderPage() {
   ])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [isRecording, setIsRecording] = useState(false)
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [conversationId, setConversationId] = useState<string | null>(null)
+
   const bottomRef = useRef<HTMLDivElement>(null)
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const photoInputRef = useRef<HTMLInputElement>(null)
+  const recognitionRef = useRef<{ stop: () => void } | null>(null)
+
+  // Create a conversation record on mount
+  useEffect(() => {
+    api.conversations.create(lang).then((r) => setConversationId(r.id)).catch(() => {})
+  }, [lang])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, isLoading])
+  }, [messages, isLoading, isAnalyzing])
 
-  const send = async () => {
-    const text = input.trim()
+  const saveMessage = (role: string, inputType: string, content: string) => {
+    if (!conversationId) return
+    api.conversations.addMessage(conversationId, { role, inputType, content }).catch(() => {})
+  }
+
+  // ── Text send ──────────────────────────────────────────────────────────────
+  const send = async (overrideText?: string, inputType: 'text' | 'voice' = 'text') => {
+    const text = (overrideText ?? input).trim()
     if (!text || isLoading) return
 
     const userMsg: ChatMsg = { role: 'user', text }
-    const history: GroqMessage[] = [...messages, userMsg].map((m) => ({
-      role: m.role,
-      content: m.text,
-    }))
+    const history: GroqMessage[] = [...messages, userMsg]
+      .filter((m) => !m.isImage)
+      .map((m) => ({ role: m.role, content: m.text }))
 
     setMessages((prev) => [...prev, userMsg])
     setInput('')
     setIsLoading(true)
+    saveMessage('user', inputType, text)
 
     const { text: aiText, order } = await askGroq(history)
     setMessages((prev) => [...prev, { role: 'assistant', text: aiText, order }])
+    saveMessage('assistant', 'text', aiText)
     setIsLoading(false)
   }
 
-  const handleConfirm = (order: DetectedOrder) => {
-    navigate('/create-delivery', {
-      state: { firstName, prefill: order },
-    })
+  // ── Photo upload ───────────────────────────────────────────────────────────
+  const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ''
+
+    setIsAnalyzing(true)
+    setMessages((prev) => [...prev, { role: 'user', text: t.analyzing, isImage: true }])
+
+    const reader = new FileReader()
+    reader.onload = async () => {
+      const dataUrl = reader.result as string
+      const base64 = dataUrl.split(',')[1]
+      const mimeType = file.type || 'image/jpeg'
+
+      const itemList = await analyzeImage(base64, mimeType)
+      const userText = `${t.photoPrefix}${itemList}`
+
+      setMessages((prev) => {
+        const updated = [...prev]
+        updated[updated.length - 1] = { role: 'user', text: userText, isImage: true }
+        return updated
+      })
+      setIsAnalyzing(false)
+      setIsLoading(true)
+      saveMessage('user', 'image', userText)
+
+      const history: GroqMessage[] = [
+        ...messages.filter((m) => !m.isImage).map((m) => ({ role: m.role as 'user' | 'assistant', content: m.text })),
+        { role: 'user' as const, content: userText },
+      ]
+      const { text: aiText, order } = await askGroq(history)
+      setMessages((prev) => [...prev, { role: 'assistant', text: aiText, order }])
+      saveMessage('assistant', 'text', aiText)
+      setIsLoading(false)
+    }
+    reader.readAsDataURL(file)
   }
+
+  // ── Voice recording ────────────────────────────────────────────────────────
+  const toggleVoice = () => {
+    type SR = { lang: string; continuous: boolean; interimResults: boolean; start(): void; stop(): void; onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null; onend: (() => void) | null; onerror: (() => void) | null }
+    const win = window as unknown as { SpeechRecognition?: new () => SR; webkitSpeechRecognition?: new () => SR }
+    const SpeechRecognitionAPI = win.SpeechRecognition ?? win.webkitSpeechRecognition
+
+    if (!SpeechRecognitionAPI) { alert(t.voiceNotSupported); return }
+
+    if (isRecording) {
+      recognitionRef.current?.stop()
+      setIsRecording(false)
+      return
+    }
+
+    const recognition = new SpeechRecognitionAPI()
+    recognition.lang = lang === 'de' ? 'de-DE' : 'en-US'
+    recognition.continuous = false
+    recognition.interimResults = false
+
+    recognition.onresult = (event) => {
+      const transcript = (event.results[0] as ArrayLike<{ transcript: string }>)[0]?.transcript ?? ''
+      if (transcript) {
+        setInput((prev) => (prev ? `${prev} ${transcript}` : transcript))
+        // auto-send voice transcript immediately
+        send(transcript, 'voice')
+      }
+    }
+    recognition.onend = () => setIsRecording(false)
+    recognition.onerror = () => setIsRecording(false)
+
+    recognitionRef.current = recognition
+    recognition.start()
+    setIsRecording(true)
+  }
+
+  const handleConfirm = (order: DetectedOrder) => {
+    navigate('/create-delivery', { state: { firstName, prefill: order, conversationId } })
+  }
+
+  const hasUserMessage = messages.some((m) => m.role === 'user')
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
       {/* Top bar */}
       <div className="flex items-center justify-between px-6 pt-7 pb-4 border-b border-gray-100 shrink-0">
-        <button
-          onClick={() => navigate('/home/customer', { state: { firstName } })}
-          className="flex items-center gap-2 text-gray-500 hover:text-gray-800 transition-colors"
-        >
+        <button onClick={() => navigate(-1)}
+          className="flex items-center gap-2 text-gray-500 hover:text-gray-800 transition-colors">
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
           </svg>
@@ -144,20 +240,14 @@ export default function EasyOrderPage() {
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-5 py-6 flex flex-col gap-4 max-w-xl mx-auto w-full">
         {messages.map((msg, i) => (
-          <div
-            key={i}
-            className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
-          >
-            <div
-              className={`text-xl leading-relaxed rounded-2xl px-6 py-4 max-w-[88%] whitespace-pre-line shadow-sm ${
-                msg.role === 'user'
-                  ? 'bg-green-600 text-white rounded-tr-sm'
-                  : 'bg-white text-gray-900 rounded-tl-sm border border-gray-100'
-              }`}
-            >
+          <div key={i} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+            <div className={`text-xl leading-relaxed rounded-2xl px-6 py-4 max-w-[88%] whitespace-pre-line shadow-sm ${
+              msg.role === 'user'
+                ? 'bg-green-600 text-white rounded-tr-sm'
+                : 'bg-white text-gray-900 rounded-tl-sm border border-gray-100'
+            } ${msg.isImage ? 'opacity-80 italic text-base' : ''}`}>
               {msg.text}
 
-              {/* Order confirmation card */}
               {msg.order && (
                 <div className="mt-5 bg-gray-50 rounded-2xl border border-gray-200 overflow-hidden">
                   <div className="p-5 space-y-3">
@@ -183,11 +273,9 @@ export default function EasyOrderPage() {
                       <p className="text-2xl font-black text-gray-900">€{PRICES[msg.order.size].toFixed(2)}</p>
                     </div>
                   </div>
-                  <button
-                    onClick={() => handleConfirm(msg.order!)}
+                  <button onClick={() => handleConfirm(msg.order!)}
                     className="w-full py-5 text-xl font-bold text-white flex items-center justify-center gap-2 transition-all active:scale-[0.99]"
-                    style={{ background: 'linear-gradient(135deg, #16a34a, #15803d)' }}
-                  >
+                    style={{ background: 'linear-gradient(135deg, #16a34a, #15803d)' }}>
                     {t.confirm}
                   </button>
                 </div>
@@ -196,21 +284,18 @@ export default function EasyOrderPage() {
           </div>
         ))}
 
-        {isLoading && <TypingDots />}
+        {(isLoading || isAnalyzing) && <TypingDots />}
         <div ref={bottomRef} />
       </div>
 
-      {/* Category chips — shown only before user sends first message */}
-      {messages.length === 1 && (
+      {/* Category chips */}
+      {!hasUserMessage && (
         <div className="shrink-0 px-5 pb-3 max-w-xl mx-auto w-full">
           <p className="text-sm text-gray-400 mb-2">{t.categoryHint}</p>
           <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
             {CATEGORIES[lang].map((cat) => (
-              <button
-                key={cat.label}
-                onClick={() => setInput(cat.prompt)}
-                className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl border border-gray-200 bg-white text-gray-700 text-base font-medium whitespace-nowrap hover:border-green-400 hover:text-green-700 hover:bg-green-50 transition-colors shrink-0"
-              >
+              <button key={cat.label} onClick={() => setInput(cat.prompt)}
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl border border-gray-200 bg-white text-gray-700 text-base font-medium whitespace-nowrap hover:border-green-400 hover:text-green-700 hover:bg-green-50 transition-colors shrink-0">
                 <span className="text-xl">{cat.emoji}</span>
                 {cat.label}
               </button>
@@ -221,43 +306,73 @@ export default function EasyOrderPage() {
 
       {/* Input area */}
       <div className="shrink-0 bg-white border-t border-gray-100 px-5 py-4 max-w-xl mx-auto w-full">
-        <div className="flex gap-3 items-end">
+        <div className="flex gap-2 items-end">
+
+          {/* Camera button */}
+          <input ref={photoInputRef} type="file" accept="image/*" capture="environment"
+            className="hidden" onChange={handlePhotoSelect} />
+          <button
+            onClick={() => photoInputRef.current?.click()}
+            disabled={isLoading || isAnalyzing}
+            title={t.cameraLabel}
+            className="w-13 h-13 w-12 h-12 rounded-2xl flex items-center justify-center transition-all shrink-0 border-2 border-gray-200 hover:border-green-400 hover:bg-green-50 disabled:opacity-40"
+          >
+            <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
+            </svg>
+          </button>
+
+          {/* Mic button */}
+          <button
+            onClick={toggleVoice}
+            disabled={isLoading || isAnalyzing}
+            title={t.micStart}
+            className="w-12 h-12 rounded-2xl flex items-center justify-center transition-all shrink-0 border-2 disabled:opacity-40"
+            style={{
+              borderColor: isRecording ? '#dc2626' : '#e5e7eb',
+              background: isRecording ? '#fef2f2' : 'white',
+            }}
+          >
+            {isRecording ? (
+              <span className="w-3 h-3 rounded-full bg-red-500" style={{ animation: 'pulse 1s ease-in-out infinite' }} />
+            ) : (
+              <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
+              </svg>
+            )}
+          </button>
+
+          {/* Text input */}
           <textarea
-            ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() }
-            }}
-            placeholder={t.placeholder}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
+            placeholder={isRecording ? t.listening : t.placeholder}
             rows={2}
-            className="flex-1 px-5 py-4 rounded-2xl border-2 text-xl outline-none bg-gray-50 text-gray-900 placeholder-gray-300 resize-none transition-colors leading-snug"
-            style={{ borderColor: input.length > 0 ? '#16a34a' : '#e5e7eb' }}
+            className="flex-1 px-5 py-3 rounded-2xl border-2 text-lg outline-none bg-gray-50 text-gray-900 placeholder-gray-300 resize-none transition-colors leading-snug"
+            style={{ borderColor: input.length > 0 ? '#16a34a' : isRecording ? '#dc2626' : '#e5e7eb' }}
           />
+
+          {/* Send button */}
           <button
-            onClick={send}
-            disabled={!input.trim() || isLoading}
-            className="w-16 h-16 rounded-2xl flex items-center justify-center transition-all active:scale-95 shrink-0"
+            onClick={() => send()}
+            disabled={!input.trim() || isLoading || isAnalyzing}
+            className="w-12 h-12 rounded-2xl flex items-center justify-center transition-all active:scale-95 shrink-0"
             style={{
               background: input.trim() && !isLoading ? 'linear-gradient(135deg, #16a34a, #15803d)' : '#f3f4f6',
               boxShadow: input.trim() && !isLoading ? '0 4px 12px rgba(22,163,74,0.35)' : 'none',
             }}
           >
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke={input.trim() && !isLoading ? 'white' : '#9ca3af'}
-              strokeWidth={2.5}
-            >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24"
+              stroke={input.trim() && !isLoading ? 'white' : '#9ca3af'} strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
             </svg>
           </button>
         </div>
-        <button
-          onClick={() => navigate('/create-delivery', { state: { firstName } })}
-          className="mt-3 w-full text-center text-base text-gray-400 hover:text-gray-600 transition-colors py-1"
-        >
+
+        <button onClick={() => navigate('/create-delivery', { state: { firstName } })}
+          className="mt-3 w-full text-center text-base text-gray-400 hover:text-gray-600 transition-colors py-1">
           {t.manualLink}
         </button>
       </div>
