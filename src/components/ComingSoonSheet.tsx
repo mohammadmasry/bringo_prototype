@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useLang } from '../hooks/useLang'
 import { api } from '../lib/api'
+import { logToSheets } from '../lib/sheets'
 
 const tr = {
   de: {
@@ -66,9 +67,10 @@ export default function ComingSoonSheet({ onBack, showFeedback = false, feedback
   const handleSubmit = async () => {
     if (stars === 0 || loading) return
     setLoading(true)
+    logToSheets('feedback', { stars, liked, improve, email, page: feedbackPage })
     try {
       await api.feedback.submit({ stars, liked, improve, email, page: feedbackPage })
-    } catch { /* fire-and-forget */ }
+    } catch { /* backend optional */ }
     setSubmitted(true)
     setLoading(false)
   }

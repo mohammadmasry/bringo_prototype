@@ -6,6 +6,7 @@ import { useLang } from '../hooks/useLang'
 import { setActiveOrder } from '../lib/orderStore'
 import { setSession } from '../lib/session'
 import { api } from '../lib/api'
+import { logToSheets } from '../lib/sheets'
 import ComingSoonSheet from '../components/ComingSoonSheet'
 
 const PICKUP_PRESETS = [
@@ -145,6 +146,7 @@ export default function CreateDeliveryPage() {
     setSession({ role: 'customer', mode: 'standard', firstName })
     // Fire-and-forget: persist order to backend without blocking navigation
     api.orders.create({ pickup, dropoff, description, size, price: PRICES[size], note, conversationId: conversationId ?? undefined }).catch(console.error)
+    logToSheets('order', { pickup, dropoff, description, size, price: PRICES[size], note })
     navigate('/active-order', { state: { firstName } })
   }
 

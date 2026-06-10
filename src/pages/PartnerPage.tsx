@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import LangToggle from '../components/LangToggle'
 import { useLang } from '../hooks/useLang'
 import { api } from '../lib/api'
+import { logToSheets } from '../lib/sheets'
 
 const TYPES = {
   de: ['Restaurant', 'Supermarkt / Lebensmittel', 'Café / Bäckerei', 'Apotheke', 'Andere'],
@@ -92,12 +93,11 @@ export default function PartnerPage() {
     if (!isValid || loading) return
     setError('')
     setLoading(true)
+    logToSheets('partner', { companyName, companyType, address, contactPerson, email, phone, description })
     try {
       await api.partners.apply({ companyName, companyType, address, contactPerson, email, phone, description })
-      setSubmitted(true)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
-    }
+    } catch { /* backend optional */ }
+    setSubmitted(true)
     setLoading(false)
   }
 

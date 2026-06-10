@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "scripts": {
     "dev": "node node_modules/tsx/dist/cli.mjs watch src/index.ts",
+    "build": "node node_modules/typescript/bin/tsc",
+    "start": "node node_modules/prisma/build/index.js migrate deploy && node dist/index.js",
     "db:push": "node node_modules/prisma/build/index.js db push",
     "db:studio": "node node_modules/prisma/build/index.js studio"
   },

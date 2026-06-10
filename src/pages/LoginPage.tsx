@@ -4,6 +4,7 @@ import LangToggle from '../components/LangToggle'
 import { useLang } from '../hooks/useLang'
 import { clearSession, setSession, setToken } from '../lib/session'
 import { api } from '../lib/api'
+import { logToSheets } from '../lib/sheets'
 import ComingSoonSheet from '../components/ComingSoonSheet'
 
 type SurveyLang = 'en' | 'de'
@@ -574,6 +575,7 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
                         lang: surveyLang,
                         answers: answers as Record<string, unknown>,
                       }).catch(console.error)
+                      logToSheets('survey', { lang: surveyLang, answers })
                       setStep(4)
                     } else {
                       setQuestionIndex(questionIndex + 1)

@@ -1,10 +1,12 @@
-const BASE_URL = 'http://localhost:3001'
+const BASE_URL = import.meta.env.VITE_API_URL as string | undefined
 
 function getToken(): string | null {
   return localStorage.getItem('bringo-token')
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  if (!BASE_URL) return {} as T
+
   const token = getToken()
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
