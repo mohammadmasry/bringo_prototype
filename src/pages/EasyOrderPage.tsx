@@ -14,22 +14,6 @@ interface ChatMsg {
 
 const PRICES: Record<'S' | 'M' | 'L', number> = { S: 3.2, M: 4.5, L: 5.8 }
 
-const CATEGORIES = {
-  de: [
-    { emoji: '💊', label: 'Medikamente', prompt: 'Ich brauche Medikamente von der Apotheke.' },
-    { emoji: '🛒', label: 'Einkäufe', prompt: 'Ich brauche Einkäufe vom Supermarkt.' },
-    { emoji: '🍕', label: 'Essen', prompt: 'Ich möchte Essen vom Restaurant geliefert bekommen.' },
-    { emoji: '📦', label: 'Paket', prompt: 'Ich habe ein Paket, das abgeholt werden soll.' },
-    { emoji: '📋', label: 'Dokumente', prompt: 'Ich brauche Dokumente abgeholt.' },
-  ],
-  en: [
-    { emoji: '💊', label: 'Medicine', prompt: 'I need medicine from the pharmacy.' },
-    { emoji: '🛒', label: 'Groceries', prompt: 'I need groceries from the supermarket.' },
-    { emoji: '🍕', label: 'Food', prompt: 'I want food delivered from a restaurant.' },
-    { emoji: '📦', label: 'Package', prompt: 'I have a package that needs to be picked up.' },
-    { emoji: '📋', label: 'Documents', prompt: 'I need documents picked up.' },
-  ],
-}
 
 const tr = {
   de: {
@@ -214,8 +198,6 @@ export default function EasyOrderPage() {
     navigate('/create-delivery', { state: { firstName, prefill: order, conversationId } })
   }
 
-  const hasUserMessage = messages.some((m) => m.role === 'user')
-
   return (
     <div className="min-h-screen flex flex-col bg-white">
       {/* Top bar */}
@@ -288,21 +270,6 @@ export default function EasyOrderPage() {
         <div ref={bottomRef} />
       </div>
 
-      {/* Category chips */}
-      {!hasUserMessage && (
-        <div className="shrink-0 px-5 pb-3 max-w-xl mx-auto w-full">
-          <p className="text-sm text-gray-400 mb-2">{t.categoryHint}</p>
-          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-            {CATEGORIES[lang].map((cat) => (
-              <button key={cat.label} onClick={() => setInput(cat.prompt)}
-                className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl border border-gray-200 bg-white text-gray-700 text-base font-medium whitespace-nowrap hover:border-green-400 hover:text-green-700 hover:bg-green-50 transition-colors shrink-0">
-                <span className="text-xl">{cat.emoji}</span>
-                {cat.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Input area */}
       <div className="shrink-0 bg-white border-t border-gray-100 px-5 py-4 max-w-xl mx-auto w-full">
@@ -315,9 +282,9 @@ export default function EasyOrderPage() {
             onClick={() => photoInputRef.current?.click()}
             disabled={isLoading || isAnalyzing}
             title={t.cameraLabel}
-            className="w-13 h-13 w-12 h-12 rounded-2xl flex items-center justify-center transition-all shrink-0 border-2 border-gray-200 hover:border-green-400 hover:bg-green-50 disabled:opacity-40"
+            className="w-14 h-14 rounded-2xl flex items-center justify-center transition-all shrink-0 border-2 border-gray-200 hover:border-green-400 hover:bg-green-50 disabled:opacity-40"
           >
-            <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+            <svg className="w-7 h-7 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
               <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
             </svg>
@@ -328,16 +295,16 @@ export default function EasyOrderPage() {
             onClick={toggleVoice}
             disabled={isLoading || isAnalyzing}
             title={t.micStart}
-            className="w-12 h-12 rounded-2xl flex items-center justify-center transition-all shrink-0 border-2 disabled:opacity-40"
+            className="w-14 h-14 rounded-2xl flex items-center justify-center transition-all shrink-0 border-2 disabled:opacity-40"
             style={{
               borderColor: isRecording ? '#dc2626' : '#e5e7eb',
               background: isRecording ? '#fef2f2' : 'white',
             }}
           >
             {isRecording ? (
-              <span className="w-3 h-3 rounded-full bg-red-500" style={{ animation: 'pulse 1s ease-in-out infinite' }} />
+              <span className="w-4 h-4 rounded-full bg-red-500" style={{ animation: 'pulse 1s ease-in-out infinite' }} />
             ) : (
-              <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+              <svg className="w-7 h-7 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
               </svg>
             )}
@@ -371,10 +338,6 @@ export default function EasyOrderPage() {
           </button>
         </div>
 
-        <button onClick={() => navigate('/create-delivery', { state: { firstName } })}
-          className="mt-3 w-full text-center text-base text-gray-400 hover:text-gray-600 transition-colors py-1">
-          {t.manualLink}
-        </button>
       </div>
     </div>
   )
