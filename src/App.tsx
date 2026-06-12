@@ -17,6 +17,7 @@ import CreateDeliveryPage from './pages/CreateDeliveryPage'
 import EasyOrderPage from './pages/EasyOrderPage'
 import CustomerActiveOrderPage from './pages/CustomerActiveOrderPage'
 import CourierActiveOrderPage from './pages/CourierActiveOrderPage'
+import PrototypeDashboard from './pages/PrototypeDashboard'
 
 function AnimatedRoutes() {
   const location = useLocation()
@@ -47,6 +48,9 @@ function AnimatedRoutes() {
         <Route path="/register" element={<PageTransition><RegisterPage /></PageTransition>} />
         <Route path="/otp" element={<PageTransition><OtpPage /></PageTransition>} />
         <Route path="/welcome" element={<PageTransition><RolePickerPage /></PageTransition>} />
+
+        {/* ── Presentation ── */}
+        <Route path="/prototype" element={<PrototypeDashboard />} />
       </Routes>
     </AnimatePresence>
   )
