@@ -336,12 +336,20 @@ export default function PrototypeDashboard() {
         <div className="rounded-2xl p-6 text-center" style={{ background: 'linear-gradient(135deg, #14532d 0%, #16a34a 100%)' }}>
           <h3 className="text-xl font-black text-white mb-2">Try the prototype</h3>
           <p className="text-green-200 text-sm mb-5">Walk through the full order flow — no sign-up required.</p>
-          <button
-            onClick={() => navigate('/')}
-            className="px-8 py-3 rounded-xl font-bold text-gray-900 bg-white hover:bg-green-50 transition-colors"
-          >
-            Go to the app →
-          </button>
+          <div className="flex gap-3 justify-center flex-wrap">
+            <button
+              onClick={() => navigate('/')}
+              className="px-8 py-3 rounded-xl font-bold text-gray-900 bg-white hover:bg-green-50 transition-colors"
+            >
+              Go to the app →
+            </button>
+            <button
+              onClick={() => navigate('/calculator')}
+              className="px-8 py-3 rounded-xl font-bold text-white border border-white/30 hover:bg-white/10 transition-colors"
+            >
+              P&amp;L Calculator →
+            </button>
+          </div>
         </div>
 
         <p className="text-center text-xs text-gray-300 mt-8">© 2026 Bringo · Pfarrkirchen · Prototype v1</p>

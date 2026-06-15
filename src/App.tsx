@@ -18,6 +18,7 @@ import EasyOrderPage from './pages/EasyOrderPage'
 import CustomerActiveOrderPage from './pages/CustomerActiveOrderPage'
 import CourierActiveOrderPage from './pages/CourierActiveOrderPage'
 import PrototypeDashboard from './pages/PrototypeDashboard'
+import ProfitLossCalculator from './pages/ProfitLossCalculator.tsx'
 
 function AnimatedRoutes() {
   const location = useLocation()
@@ -51,6 +52,7 @@ function AnimatedRoutes() {
 
         {/* ── Presentation ── */}
         <Route path="/prototype" element={<PrototypeDashboard />} />
+        <Route path="/calculator" element={<ProfitLossCalculator />} />
       </Routes>
     </AnimatePresence>
   )
