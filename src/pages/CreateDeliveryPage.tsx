@@ -21,12 +21,15 @@ const DROPOFF_PRESETS = [
 
 const PRICES: Record<'S' | 'M' | 'L', number> = { S: 3.20, M: 4.50, L: 5.80 }
 
+const TIME_SLOTS = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00']
+
 const tr = {
   de: {
     s1Title: 'Abholung', s1Sub: 'Wo soll Ihr Artikel abgeholt werden?',
     s2Title: 'Zielort', s2Sub: 'Wohin soll Ihr Artikel geliefert werden?',
     s3Title: 'Was wird geliefert?', s3Sub: 'Beschreiben Sie Ihren Artikel für den Kurier.',
-    s4Title: 'Bestellung prüfen', s4Sub: 'Alles korrekt?',
+    s4Title: 'Wann?', s4Sub: 'Soll die Lieferung jetzt oder später erfolgen?',
+    s5Title: 'Bestellung prüfen', s5Sub: 'Alles korrekt?',
     pickupLabel: 'Abholadresse', dropoffLabel: 'Lieferadresse',
     orChoose: 'oder schnell wählen:',
     noteLabel: 'Nachricht an den Kurier', notePh: 'z.B. "3. OG, Klingel Schmidt"',
@@ -35,18 +38,23 @@ const tr = {
     sSmallTitle: 'Klein', sSmallSub: 'Umschlag, Dokumente',
     sMediumTitle: 'Mittel', sMediumSub: 'Bücher, Tragetasche',
     sLargeTitle: 'Groß', sLargeSub: 'Karton, mehrere Teile',
-    stepOf: (n: number) => `Schritt ${n} von 4`,
+    stepOf: (n: number) => `Schritt ${n} von 5`,
     continue: 'Weiter',
     back: 'Zurück',
     pickup: 'Abholung', dropoff: 'Zielort',
     size: 'Größe', price: 'Preis', estimated: 'Schätzung',
     smallLabel: 'Klein', mediumLabel: 'Mittel', largeLabel: 'Groß',
+    nowTitle: 'Jetzt', nowSub: 'Kurier wird sofort gesucht',
+    laterTitle: 'Später', laterSub: 'Lieferung für später einplanen',
+    dateLabel: 'Datum', timeLabel: 'Uhrzeit',
+    when: 'Wann', asap: 'Sofort',
   },
   en: {
     s1Title: 'Pickup', s1Sub: 'Where should your item be picked up from?',
     s2Title: 'Dropoff', s2Sub: 'Where should your item be delivered to?',
     s3Title: 'What are you sending?', s3Sub: 'Describe your item for the courier.',
-    s4Title: 'Review order', s4Sub: 'Everything look right?',
+    s4Title: 'When?', s4Sub: 'Should delivery happen now or later?',
+    s5Title: 'Review order', s5Sub: 'Everything look right?',
     pickupLabel: 'Pickup address', dropoffLabel: 'Delivery address',
     orChoose: 'or choose quickly:',
     noteLabel: 'Message for courier', notePh: 'e.g. "3rd floor, ring Schmidt"',
@@ -55,12 +63,16 @@ const tr = {
     sSmallTitle: 'Small', sSmallSub: 'Envelope, documents',
     sMediumTitle: 'Medium', sMediumSub: 'Books, bag',
     sLargeTitle: 'Large', sLargeSub: 'Box, multiple items',
-    stepOf: (n: number) => `Step ${n} of 4`,
+    stepOf: (n: number) => `Step ${n} of 5`,
     continue: 'Continue',
     back: 'Back',
     pickup: 'Pickup', dropoff: 'Dropoff',
     size: 'Size', price: 'Price', estimated: 'Estimated',
     smallLabel: 'Small', mediumLabel: 'Medium', largeLabel: 'Large',
+    nowTitle: 'Now', nowSub: 'Courier found immediately',
+    laterTitle: 'Later', laterSub: 'Schedule delivery for later',
+    dateLabel: 'Date', timeLabel: 'Time',
+    when: 'When', asap: 'ASAP',
   },
 }
 
@@ -78,20 +90,24 @@ export default function CreateDeliveryPage() {
   const state = (location.state as { prefill?: { pickup: string; dropoff: string; description: string; size: 'S' | 'M' | 'L' } } | null)
   const prefill = state?.prefill
 
-  const [step, setStep] = useState(prefill ? 4 : 1)
+  const [step, setStep] = useState(prefill ? 5 : 1)
   const [pickup, setPickup] = useState(prefill?.pickup ?? '')
   const [dropoff, setDropoff] = useState(prefill?.dropoff ?? '')
   const [size, setSize] = useState<'S' | 'M' | 'L'>(prefill?.size ?? 'M')
   const [note, setNote] = useState('')
+  const [scheduleType, setScheduleType] = useState<'now' | 'later'>('now')
+  const [scheduleDate, setScheduleDate] = useState('')
+  const [scheduleTime, setScheduleTime] = useState('')
 
   const canContinue =
     step === 1 ? pickup.trim().length >= 5
     : step === 2 ? dropoff.trim().length >= 5
+    : step === 4 ? scheduleType === 'now' || (scheduleDate !== '' && scheduleTime !== '')
     : true
 
   const goNext = () => {
-    if (step < 4) setStep((s) => s + 1)
-    else setStep(5)
+    if (step < 5) setStep((s) => s + 1)
+    else setStep(6)
   }
 
   const goBack = () => {
@@ -99,8 +115,8 @@ export default function CreateDeliveryPage() {
     else navigate('/')
   }
 
-  if (step === 5) {
-    return <ComingSoonSheet onBack={() => setStep(4)} showFeedback feedbackPage="create-delivery" />
+  if (step === 6) {
+    return <ComingSoonSheet onBack={() => setStep(5)} showFeedback feedbackPage="create-delivery" />
   }
 
   return (
@@ -123,8 +139,8 @@ export default function CreateDeliveryPage() {
 
       <div className="flex-1 flex flex-col px-6 max-w-lg mx-auto w-full pb-10 pt-8">
         {/* Step bar */}
-        <div className="flex gap-1.5 mb-8" role="progressbar" aria-valuenow={step} aria-valuemin={1} aria-valuemax={4} aria-label={t.stepOf(step)}>
-          {[0, 1, 2, 3].map((i) => (
+        <div className="flex gap-1.5 mb-8" role="progressbar" aria-valuenow={step} aria-valuemin={1} aria-valuemax={5} aria-label={t.stepOf(step)}>
+          {[0, 1, 2, 3, 4].map((i) => (
             <div
               key={i}
               className="flex-1 h-1.5 rounded-full transition-all duration-500"
@@ -259,6 +275,92 @@ export default function CreateDeliveryPage() {
             <h1 className="text-3xl font-black text-gray-900 mb-2">{t.s4Title}</h1>
             <p className="text-gray-400 text-sm mb-6">{t.s4Sub}</p>
 
+            <div className="grid grid-cols-2 gap-3 mb-6">
+              {(['now', 'later'] as const).map((type) => {
+                const selected = scheduleType === type
+                const icon = type === 'now' ? '⚡' : '📅'
+                const title = type === 'now' ? t.nowTitle : t.laterTitle
+                const sub = type === 'now' ? t.nowSub : t.laterSub
+                return (
+                  <button
+                    key={type}
+                    onClick={() => setScheduleType(type)}
+                    aria-pressed={selected}
+                    className="p-5 rounded-2xl border-2 text-left transition-all"
+                    style={{
+                      borderColor: selected ? '#16a34a' : '#e5e7eb',
+                      background: selected ? '#f0fdf4' : 'white',
+                    }}
+                  >
+                    <p className="text-2xl mb-2" aria-hidden="true">{icon}</p>
+                    <p className="text-sm font-bold" style={{ color: selected ? '#15803d' : '#111827' }}>{title}</p>
+                    <p className="text-xs text-gray-400 mt-0.5 leading-tight">{sub}</p>
+                  </button>
+                )
+              })}
+            </div>
+
+            {scheduleType === 'later' && (
+              <div className="space-y-5">
+                <div>
+                  <p className="text-sm font-semibold text-gray-700 mb-3">{t.dateLabel}</p>
+                  <div className="flex gap-2 overflow-x-auto pb-1">
+                    {Array.from({ length: 14 }, (_, i) => {
+                      const d = new Date(Date.now() + i * 24 * 60 * 60 * 1000)
+                      const iso = d.toISOString().split('T')[0]
+                      const dayName = d.toLocaleDateString(lang === 'de' ? 'de-DE' : 'en-GB', { weekday: 'short' })
+                      const dayNum = d.getDate()
+                      const selected = scheduleDate === iso
+                      return (
+                        <button
+                          key={iso}
+                          onClick={() => setScheduleDate(iso)}
+                          aria-pressed={selected}
+                          className="flex flex-col items-center shrink-0 w-12 py-2.5 rounded-xl border-2 transition-all"
+                          style={{
+                            borderColor: selected ? '#16a34a' : '#e5e7eb',
+                            background: selected ? '#f0fdf4' : 'white',
+                            color: selected ? '#15803d' : '#374151',
+                          }}
+                        >
+                          <span className="text-xs font-semibold">{dayName}</span>
+                          <span className="text-base font-black">{dayNum}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-700 mb-3">{t.timeLabel}</p>
+                  <div className="grid grid-cols-4 gap-2">
+                    {TIME_SLOTS.map((slot) => (
+                      <button
+                        key={slot}
+                        onClick={() => setScheduleTime(slot)}
+                        aria-pressed={scheduleTime === slot}
+                        className="py-2.5 rounded-xl text-sm font-semibold border-2 transition-all"
+                        style={{
+                          borderColor: scheduleTime === slot ? '#16a34a' : '#e5e7eb',
+                          background: scheduleTime === slot ? '#f0fdf4' : 'white',
+                          color: scheduleTime === slot ? '#15803d' : '#374151',
+                        }}
+                      >
+                        {slot}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {step === 5 && (
+          <div className="animate-fade-in-up">
+            <p className="text-xs font-semibold text-green-600 uppercase tracking-wider mb-1">{t.stepOf(5)}</p>
+            <h1 className="text-3xl font-black text-gray-900 mb-2">{t.s5Title}</h1>
+            <p className="text-gray-400 text-sm mb-6">{t.s5Sub}</p>
+
             <div className="bg-gray-50 rounded-2xl p-5 mb-4">
               <div className="flex gap-3 mb-5">
                 <div className="flex flex-col items-center pt-0.5 shrink-0">
@@ -294,15 +396,29 @@ export default function CreateDeliveryPage() {
               </div>
             </div>
 
-            <div
-              className="flex items-center justify-between bg-white rounded-2xl p-5 border border-green-100"
-              style={{ boxShadow: '0 0 0 2px rgba(22,163,74,0.1)' }}
-            >
-              <div>
-                <p className="text-sm font-semibold text-gray-700">{t.price}</p>
-                <p className="text-xs text-gray-400">{t.estimated}</p>
+            <div className="flex gap-3 mb-3">
+              <div
+                className="flex-1 flex items-center justify-between bg-white rounded-2xl p-4 border border-green-100"
+                style={{ boxShadow: '0 0 0 2px rgba(22,163,74,0.1)' }}
+              >
+                <div>
+                  <p className="text-sm font-semibold text-gray-700">{t.price}</p>
+                  <p className="text-xs text-gray-400">{t.estimated}</p>
+                </div>
+                <p className="text-3xl font-black text-gray-900">€{PRICES[size].toFixed(2)}</p>
               </div>
-              <p className="text-3xl font-black text-gray-900">€{PRICES[size].toFixed(2)}</p>
+              <div
+                className="flex items-center gap-2 bg-white rounded-2xl px-4 border border-green-100"
+                style={{ boxShadow: '0 0 0 2px rgba(22,163,74,0.1)' }}
+              >
+                <span className="text-lg" aria-hidden="true">{scheduleType === 'now' ? '⚡' : '📅'}</span>
+                <div>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{t.when}</p>
+                  <p className="text-sm font-bold text-gray-900">
+                    {scheduleType === 'now' ? t.asap : `${scheduleDate} ${scheduleTime}`}
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         )}
