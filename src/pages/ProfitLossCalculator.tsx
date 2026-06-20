@@ -1,6 +1,4 @@
 // @ts-nocheck
-"use client";
-
 import { useMemo, useState } from "react";
 
 const DEFAULTS = {
