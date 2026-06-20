@@ -4,6 +4,7 @@ import BringoLogo from '../components/BringoLogo'
 import LangToggle from '../components/LangToggle'
 import { useLang } from '../hooks/useLang'
 import ComingSoonSheet from '../components/ComingSoonSheet'
+import { calculatePrice } from '../lib/pricing'
 
 const PICKUP_PRESETS = [
   'CAMPUS Pfarrkirchen, Petersbogen 1',
@@ -19,7 +20,6 @@ const DROPOFF_PRESETS = [
   'Kirchgasse 5, 84347 Pfarrkirchen',
 ]
 
-const PRICES: Record<'S' | 'M' | 'L', number> = { S: 3.20, M: 4.50, L: 5.80 }
 
 const TIME_SLOTS = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00']
 
@@ -48,6 +48,7 @@ const tr = {
     laterTitle: 'Später', laterSub: 'Lieferung für später einplanen',
     dateLabel: 'Datum', timeLabel: 'Uhrzeit',
     when: 'Wann', asap: 'Sofort',
+    priceBase: 'Grundpreis', priceDist: 'Entfernung', pricePeak: 'Stoßzeit', priceTotal: 'Gesamt',
   },
   en: {
     s1Title: 'Pickup', s1Sub: 'Where should your item be picked up from?',
@@ -73,6 +74,7 @@ const tr = {
     laterTitle: 'Later', laterSub: 'Schedule delivery for later',
     dateLabel: 'Date', timeLabel: 'Time',
     when: 'When', asap: 'ASAP',
+    priceBase: 'Base price', priceDist: 'Distance', pricePeak: 'Peak hour', priceTotal: 'Total',
   },
 }
 
@@ -396,30 +398,41 @@ export default function CreateDeliveryPage() {
               </div>
             </div>
 
-            <div className="flex gap-3 mb-3">
-              <div
-                className="flex-1 flex items-center justify-between bg-white rounded-2xl p-4 border border-green-100"
-                style={{ boxShadow: '0 0 0 2px rgba(22,163,74,0.1)' }}
-              >
-                <div>
-                  <p className="text-sm font-semibold text-gray-700">{t.price}</p>
-                  <p className="text-xs text-gray-400">{t.estimated}</p>
+            {(() => {
+              const p = calculatePrice(pickup, dropoff, size, scheduleType, scheduleTime)
+              return (
+                <div className="bg-white rounded-2xl border border-green-100 mb-3 overflow-hidden"
+                  style={{ boxShadow: '0 0 0 2px rgba(22,163,74,0.1)' }}>
+                  <div className="px-5 py-4 space-y-2">
+                    <div className="flex justify-between text-sm text-gray-500">
+                      <span>{t.priceBase} ({size === 'S' ? t.smallLabel : size === 'M' ? t.mediumLabel : t.largeLabel})</span>
+                      <span>€{p.base.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm text-gray-500">
+                      <span>{t.priceDist} (~{p.estimatedKm} km)</span>
+                      <span>+ €{p.distanceSurcharge.toFixed(2)}</span>
+                    </div>
+                    {p.isPeak && (
+                      <div className="flex justify-between text-sm text-amber-600">
+                        <span>⚡ {t.pricePeak}</span>
+                        <span>+ €{p.peakSurcharge.toFixed(2)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between items-center pt-2 border-t border-gray-100">
+                      <span className="text-sm font-semibold text-gray-700">{t.priceTotal}</span>
+                      <span className="text-3xl font-black text-gray-900">€{p.total.toFixed(2)}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 px-5 py-3 bg-gray-50 border-t border-gray-100">
+                    <span className="text-base" aria-hidden="true">{scheduleType === 'now' ? '⚡' : '📅'}</span>
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{t.when}:</p>
+                    <p className="text-sm font-bold text-gray-900">
+                      {scheduleType === 'now' ? t.asap : `${scheduleDate} · ${scheduleTime}`}
+                    </p>
+                  </div>
                 </div>
-                <p className="text-3xl font-black text-gray-900">€{PRICES[size].toFixed(2)}</p>
-              </div>
-              <div
-                className="flex items-center gap-2 bg-white rounded-2xl px-4 border border-green-100"
-                style={{ boxShadow: '0 0 0 2px rgba(22,163,74,0.1)' }}
-              >
-                <span className="text-lg" aria-hidden="true">{scheduleType === 'now' ? '⚡' : '📅'}</span>
-                <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{t.when}</p>
-                  <p className="text-sm font-bold text-gray-900">
-                    {scheduleType === 'now' ? t.asap : `${scheduleDate} ${scheduleTime}`}
-                  </p>
-                </div>
-              </div>
-            </div>
+              )
+            })()}
           </div>
         )}
 
