@@ -8,13 +8,14 @@ import { getActiveOrder, setActiveOrder, type StoredOrder } from '../lib/orderSt
 interface MockOrder {
   id: string; pickup: string; dropoff: string
   item: string; size: 'S' | 'M' | 'L'; price: number; distance: number; minsAgo: number
+  scheduleType?: 'now' | 'later'; scheduleDate?: string; scheduleTime?: string
 }
 
 const MOCK_ORDERS: MockOrder[] = [
-  { id: '1', pickup: 'CAMPUS Pfarrkirchen, Petersbogen 1', dropoff: 'Stadtplatz 12, 84347 Pfarrkirchen', item: 'Textbooks', size: 'M', price: 4.50, distance: 1.2, minsAgo: 3 },
-  { id: '2', pickup: 'Edeka, Griesbacher Str. 3, Pfarrkirchen', dropoff: 'Ludwigstraße 8, 84347 Pfarrkirchen', item: 'Grocery bag', size: 'M', price: 5.50, distance: 2.1, minsAgo: 7 },
-  { id: '3', pickup: 'Bahnhof Pfarrkirchen, Bahnhofstr. 1', dropoff: 'Ringstraße 44, 84347 Pfarrkirchen', item: 'Documents envelope', size: 'S', price: 3.20, distance: 0.8, minsAgo: 12 },
-  { id: '4', pickup: 'Rewe, Münchener Str. 8, Pfarrkirchen', dropoff: 'Kirchgasse 5, 84347 Pfarrkirchen', item: 'Medium box', size: 'M', price: 6.00, distance: 1.8, minsAgo: 19 },
+  { id: '1', pickup: 'CAMPUS Pfarrkirchen, Petersbogen 1', dropoff: 'Stadtplatz 12, 84347 Pfarrkirchen', item: 'Textbooks', size: 'M', price: 4.50, distance: 1.2, minsAgo: 3, scheduleType: 'now' },
+  { id: '2', pickup: 'Edeka, Griesbacher Str. 3, Pfarrkirchen', dropoff: 'Ludwigstraße 8, 84347 Pfarrkirchen', item: 'Grocery bag', size: 'M', price: 5.50, distance: 2.1, minsAgo: 7, scheduleType: 'later', scheduleDate: 'Fr 20.06.', scheduleTime: '14:00' },
+  { id: '3', pickup: 'Bahnhof Pfarrkirchen, Bahnhofstr. 1', dropoff: 'Ringstraße 44, 84347 Pfarrkirchen', item: 'Documents envelope', size: 'S', price: 3.20, distance: 0.8, minsAgo: 12, scheduleType: 'now' },
+  { id: '4', pickup: 'Rewe, Münchener Str. 8, Pfarrkirchen', dropoff: 'Kirchgasse 5, 84347 Pfarrkirchen', item: 'Medium box', size: 'M', price: 6.00, distance: 1.8, minsAgo: 19, scheduleType: 'later', scheduleDate: 'Sa 21.06.', scheduleTime: '10:00' },
 ]
 
 const SIZE_COLORS: Record<string, { bg: string; text: string }> = {
@@ -36,6 +37,11 @@ const tr = {
     minsAgo: (n: number) => `vor ${n} Min.`,
     newOrder: 'Neue Bestellung!', newOrderSub: 'Ein Kunde wartet auf eine Lieferung.',
     switchRole: 'Rolle wechseln', logout: 'Abmelden',
+    nextOrder: 'Dein nächster Auftrag',
+    nextOrderSub: 'Du wurdest einem Auftrag zugewiesen.',
+    noOrders: 'Keine Aufträge', noOrdersSub: 'Im Moment sind keine Aufträge in deiner Nähe.',
+    asap: 'Sofort', scheduled: 'Geplant',
+    moreOrders: 'Weitere Aufträge in der Nähe',
   },
   en: {
     banner: 'Verification in progress — you can browse but not accept orders yet',
@@ -49,19 +55,42 @@ const tr = {
     minsAgo: (n: number) => `${n} min ago`,
     newOrder: 'New order!', newOrderSub: 'A customer is waiting for a delivery.',
     switchRole: 'Switch role', logout: 'Log out',
+    nextOrder: 'Your next order',
+    nextOrderSub: 'You have been assigned an order.',
+    noOrders: 'No orders', noOrdersSub: 'No orders near you right now.',
+    asap: 'ASAP', scheduled: 'Scheduled',
+    moreOrders: 'More orders nearby',
   },
 }
 
-function MockOrderCard({ order, onAccept, acceptLabel, minsAgoLabel }: {
-  order: MockOrder; onAccept: (order: MockOrder) => void; acceptLabel: string; minsAgoLabel: string
+function ScheduleBadge({ scheduleType, scheduleDate, scheduleTime, asapLabel }: {
+  scheduleType?: 'now' | 'later'; scheduleDate?: string; scheduleTime?: string; asapLabel: string
+}) {
+  if (!scheduleType) return null
+  const isNow = scheduleType === 'now'
+  return (
+    <span
+      className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full"
+      style={{ background: isNow ? '#f0fdf4' : '#eff6ff', color: isNow ? '#15803d' : '#2563eb' }}
+    >
+      {isNow ? '⚡' : '📅'} {isNow ? asapLabel : `${scheduleDate ?? ''} ${scheduleTime ?? ''}`.trim()}
+    </span>
+  )
+}
+
+function MockOrderCard({ order, onAccept, acceptLabel, minsAgoLabel, asapLabel }: {
+  order: MockOrder; onAccept: (order: MockOrder) => void; acceptLabel: string; minsAgoLabel: string; asapLabel: string
 }) {
   const size = SIZE_COLORS[order.size]
   return (
     <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-bold px-2.5 py-1 rounded-full" style={{ background: size.bg, color: size.text }}>{order.size}</span>
-          <span className="text-sm font-medium text-gray-700">{order.item}</span>
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold px-2.5 py-1 rounded-full" style={{ background: size.bg, color: size.text }}>{order.size}</span>
+            <span className="text-sm font-medium text-gray-700">{order.item}</span>
+          </div>
+          <ScheduleBadge scheduleType={order.scheduleType} scheduleDate={order.scheduleDate} scheduleTime={order.scheduleTime} asapLabel={asapLabel} />
         </div>
         <div className="text-right">
           <p className="text-xl font-black text-gray-900">€{order.price.toFixed(2)}</p>
@@ -93,8 +122,8 @@ function MockOrderCard({ order, onAccept, acceptLabel, minsAgoLabel }: {
   )
 }
 
-function CustomerOrderCard({ order, onAccept, acceptLabel }: {
-  order: StoredOrder; onAccept: (order: StoredOrder) => void; acceptLabel: string
+function CustomerOrderCard({ order, onAccept, acceptLabel, asapLabel }: {
+  order: StoredOrder; onAccept: (order: StoredOrder) => void; acceptLabel: string; asapLabel: string
 }) {
   const size = SIZE_COLORS[order.size]
   return (
@@ -105,6 +134,7 @@ function CustomerOrderCard({ order, onAccept, acceptLabel }: {
       <div className="flex items-center gap-2 mb-3">
         <span className="w-2 h-2 rounded-full bg-green-500 pulse-dot" />
         <span className="text-xs font-bold text-green-700 uppercase tracking-wider">Live</span>
+        <ScheduleBadge scheduleType={order.scheduleType} scheduleDate={order.scheduleDate} scheduleTime={order.scheduleTime} asapLabel={asapLabel} />
         <span className="text-xs font-bold px-2 py-0.5 rounded-full ml-auto" style={{ background: size.bg, color: size.text }}>{order.size}</span>
       </div>
       <div className="flex gap-3 mb-4">
@@ -170,56 +200,79 @@ export default function CourierHomePage() {
     })
   }
 
+  const header = (
+    <div className="bg-white border-b border-gray-100 px-6 pt-8 pb-5">
+      <div className="max-w-lg mx-auto">
+        <div className="flex items-center justify-between mb-4">
+          <div className="relative">
+            <button
+              onClick={() => setShowMenu((v) => !v)}
+              className="w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm transition-opacity hover:opacity-80"
+              style={{ background: 'linear-gradient(135deg, #16a34a, #14532d)' }}
+            >
+              {firstName[0]?.toUpperCase()}
+            </button>
+            {showMenu && (
+              <div className="absolute left-0 top-11 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50 min-w-36 animate-fade-in-up">
+                <button onClick={() => navigate('/welcome')} className="w-full text-left px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                  {t.switchRole}
+                </button>
+                <button onClick={() => { clearSession(); navigate('/') }} className="w-full text-left px-4 py-2.5 text-sm font-medium text-red-500 hover:bg-red-50">
+                  {t.logout}
+                </button>
+              </div>
+            )}
+          </div>
+          <LangToggle />
+        </div>
+        <p className="text-sm text-gray-400 font-medium">{t.greet(firstName)}</p>
+        <h1 className="text-2xl font-black text-gray-900">
+          {customerOrder ? t.nextOrder : t.title}
+        </h1>
+        {customerOrder && (
+          <p className="text-sm text-gray-400 mt-0.5">{t.nextOrderSub}</p>
+        )}
+      </div>
+    </div>
+  )
+
+  // Focused "next order" view when a real customer order exists
+  if (customerOrder) {
+    return (
+      <div className="min-h-screen flex flex-col" style={{ background: '#f8fafc' }}>
+        {header}
+        <div className="flex-1 px-6 py-5 max-w-lg mx-auto w-full">
+          <CustomerOrderCard order={customerOrder} onAccept={handleAcceptCustomerOrder} acceptLabel={t.accept} asapLabel={t.asap} />
+          {MOCK_ORDERS.length > 0 && (
+            <>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 mt-6">{t.moreOrders}</p>
+              <div className="space-y-3">
+                {MOCK_ORDERS.map((order) => (
+                  <MockOrderCard key={order.id} order={order} onAccept={handleAcceptMock} acceptLabel={t.accept} minsAgoLabel={t.minsAgo(order.minsAgo)} asapLabel={t.asap} />
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+        {showMenu && <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />}
+      </div>
+    )
+  }
+
+  // Default browse view — no assigned order
   return (
     <div className="min-h-screen flex flex-col" style={{ background: '#f8fafc' }}>
-      <div className="bg-white border-b border-gray-100 px-6 pt-8 pb-5">
-        <div className="max-w-lg mx-auto">
-          <div className="flex items-center justify-between mb-4">
-            {/* Avatar + dropdown */}
-            <div className="relative">
-              <button
-                onClick={() => setShowMenu((v) => !v)}
-                className="w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm transition-opacity hover:opacity-80"
-                style={{ background: 'linear-gradient(135deg, #16a34a, #14532d)' }}
-              >
-                {firstName[0]?.toUpperCase()}
-              </button>
-              {showMenu && (
-                <div className="absolute left-0 top-11 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50 min-w-36 animate-fade-in-up">
-                  <button onClick={() => navigate('/welcome')} className="w-full text-left px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                    {t.switchRole}
-                  </button>
-                  <button onClick={() => { clearSession(); navigate('/') }} className="w-full text-left px-4 py-2.5 text-sm font-medium text-red-500 hover:bg-red-50">
-                    {t.logout}
-                  </button>
-                </div>
-              )}
-            </div>
-            <LangToggle />
-          </div>
+      {header}
 
-          <div className="flex items-start gap-2 bg-amber-50 border border-amber-100 rounded-xl px-4 py-2.5 mb-5">
-            <svg className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-            </svg>
-            <p className="text-xs font-semibold text-amber-700">{t.banner}</p>
-          </div>
-
-          <div className="flex items-end justify-between">
-            <div>
-              <p className="text-sm text-gray-400 font-medium">{t.greet(firstName)}</p>
-              <h1 className="text-2xl font-black text-gray-900">{t.title}</h1>
-            </div>
-            <div className="text-right">
-              <p className="text-2xl font-black text-green-600">{MOCK_ORDERS.length + (customerOrder ? 1 : 0)}</p>
-              <p className="text-xs text-gray-400">{t.available}</p>
-            </div>
-          </div>
-        </div>
+      <div className="flex items-start gap-2 bg-amber-50 border border-amber-100 mx-6 mt-4 rounded-xl px-4 py-2.5">
+        <svg className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+        </svg>
+        <p className="text-xs font-semibold text-amber-700">{t.banner}</p>
       </div>
 
       {/* Filter tabs */}
-      <div className="bg-white border-b border-gray-100 px-6 py-3">
+      <div className="bg-white border-b border-gray-100 px-6 py-3 mt-4">
         <div className="max-w-lg mx-auto flex gap-2">
           {(['All', 'S', 'M', 'L'] as const).map((f) => (
             <button key={f} onClick={() => setFilter(f)}
@@ -232,14 +285,9 @@ export default function CourierHomePage() {
       </div>
 
       <div className="flex-1 px-6 py-5 max-w-lg mx-auto w-full">
-        {/* Customer's live order — always shown first */}
-        {customerOrder && (filter === 'All' || filter === customerOrder.size) && (
-          <CustomerOrderCard order={customerOrder} onAccept={handleAcceptCustomerOrder} acceptLabel={t.accept} />
-        )}
-
         <div className="space-y-3">
           {filtered.map((order) => (
-            <MockOrderCard key={order.id} order={order} onAccept={handleAcceptMock} acceptLabel={t.accept} minsAgoLabel={t.minsAgo(order.minsAgo)} />
+            <MockOrderCard key={order.id} order={order} onAccept={handleAcceptMock} acceptLabel={t.accept} minsAgoLabel={t.minsAgo(order.minsAgo)} asapLabel={t.asap} />
           ))}
         </div>
         <p className="text-center text-xs text-gray-300 mt-8">{t.footer}</p>

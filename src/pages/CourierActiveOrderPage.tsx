@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { useLang } from '../hooks/useLang'
 import { getSession } from '../lib/session'
 import { getActiveOrder, setActiveOrder, addToHistory } from '../lib/orderStore'
+import { estimateKm } from '../lib/pricing'
 
 type Status = 'heading_to_pickup' | 'picked_up' | 'delivered'
 
@@ -22,6 +23,8 @@ const tr = {
     cancelOrder: 'Auftrag abbrechen',
     orderRef: 'Auftrag',
     small: 'Klein', medium: 'Mittel', large: 'Groß',
+    navigate: 'Navigieren', routeInfo: 'Route', minEta: 'min (geschätzt)',
+    scheduleLabel: 'Lieferzeit', asap: 'Sofort',
   },
   en: {
     heading_to_pickup: 'Heading to pickup',
@@ -38,6 +41,8 @@ const tr = {
     cancelOrder: 'Cancel order',
     orderRef: 'Order',
     small: 'Small', medium: 'Medium', large: 'Large',
+    navigate: 'Navigate', routeInfo: 'Route', minEta: 'min (estimated)',
+    scheduleLabel: 'Delivery time', asap: 'ASAP',
   },
 }
 
@@ -55,6 +60,9 @@ interface Order {
   description?: string
   size: 'S' | 'M' | 'L'
   price: number
+  scheduleType?: 'now' | 'later'
+  scheduleDate?: string
+  scheduleTime?: string
 }
 
 export default function CourierActiveOrderPage() {
@@ -192,6 +200,47 @@ export default function CourierActiveOrderPage() {
             </div>
           </div>
         </div>
+
+        {(() => {
+          const km = estimateKm(order.pickup, order.dropoff)
+          const destination = status === 'heading_to_pickup' ? order.pickup : order.dropoff
+          const etaMin = Math.round((km / 15) * 60)
+          const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`
+          return (
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm mb-4 overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
+                <div className="flex items-center gap-3">
+                  <span className="text-lg" aria-hidden="true">🗺️</span>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{t.routeInfo}</p>
+                    <p className="text-sm font-bold text-gray-900">~{Math.round(km * 10) / 10} km · ~{etaMin} {t.minEta}</p>
+                  </div>
+                </div>
+                {order.scheduleType && (
+                  <div className="text-right">
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{t.scheduleLabel}</p>
+                    <p className="text-sm font-bold" style={{ color: order.scheduleType === 'now' ? '#15803d' : '#2563eb' }}>
+                      {order.scheduleType === 'now' ? `⚡ ${t.asap}` : `📅 ${order.scheduleDate ?? ''} ${order.scheduleTime ?? ''}`.trim()}
+                    </p>
+                  </div>
+                )}
+              </div>
+              <a
+                href={mapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full py-3.5 font-semibold text-sm text-white transition-all"
+                style={{ background: 'linear-gradient(135deg, #1d4ed8, #1e40af)' }}
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+                </svg>
+                {t.navigate} → {destination}
+              </a>
+            </div>
+          )
+        })()}
 
         <div className="space-y-3">
           {status === 'heading_to_pickup' && (

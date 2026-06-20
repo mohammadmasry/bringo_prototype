@@ -10,6 +10,9 @@ export interface StoredOrder {
   price: number
   note?: string
   status: 'searching' | 'found' | 'heading_to_pickup' | 'picked_up' | 'delivered'
+  scheduleType?: 'now' | 'later'
+  scheduleDate?: string
+  scheduleTime?: string
 }
 
 export function getActiveOrder(): StoredOrder | null {
