@@ -15,10 +15,10 @@ const DEFAULTS = {
   businessFee: 120,
   businessFeePeriod: "year",
 
-  deliveriesMonth: 50,
+  deliveriesPerMemberMonth: 2,
   avgDeliveryFee: 5.5,
 
-  errandTripsMonth: 30,
+  errandTripsPerMemberMonth: 2,
   avgErrandFee: 20,
 
   dseeFundingEnabled: false,
@@ -87,9 +87,11 @@ const TEXT = {
     reducedAmount: "Ermäßigter Betrag",
     businessPartners: "Business-Partner",
     businessAmount: "Business-Betrag",
-    deliveriesMonth: "Lieferungen / Monat",
+    deliveriesPerMemberMonth: "Lieferungen / Mitglied / Monat",
+    deliveriesMonth: "Lieferungen / Monat (berechnet)",
     avgDeliveryFee: "Ø Liefergebühr",
-    errandTripsMonth: "Besorgungsfahrten / Monat",
+    errandTripsPerMemberMonth: "Besorgungen / Mitglied / Monat",
+    errandTripsMonth: "Besorgungsfahrten / Monat (berechnet)",
     avgErrandFee: "Ø Besorgungsgebühr",
     dseeFunding: "MikroFörderung-DSEE",
     dseeFundingAmount: "DSEE-Förderbetrag",
@@ -187,9 +189,11 @@ const TEXT = {
     reducedAmount: "Reduced fee",
     businessPartners: "Business partners",
     businessAmount: "Business fee",
-    deliveriesMonth: "Deliveries / month",
+    deliveriesPerMemberMonth: "Deliveries / member / month",
+    deliveriesMonth: "Deliveries / month (computed)",
     avgDeliveryFee: "Avg. delivery fee",
-    errandTripsMonth: "Errand trips / month",
+    errandTripsPerMemberMonth: "Errand trips / member / month",
+    errandTripsMonth: "Errand trips / month (computed)",
     avgErrandFee: "Avg. errand fee",
     dseeFunding: "DSEE micro-funding",
     dseeFundingAmount: "DSEE funding amount",
@@ -375,8 +379,10 @@ export default function ProfitLossCalculator() {
   };
 
   const r = useMemo(() => {
-    const deliveriesYear = a.deliveriesMonth * 12;
-    const errandTripsYear = a.errandTripsMonth * 12;
+    const deliveriesMonth = Math.round(((a.regularMembers + a.reducedMembers) / 2) * a.deliveriesPerMemberMonth);
+    const errandTripsMonth = Math.round(((a.regularMembers + a.reducedMembers) / 2) * a.errandTripsPerMemberMonth);
+    const deliveriesYear = deliveriesMonth * 12;
+    const errandTripsYear = errandTripsMonth * 12;
     const totalTripsYear = deliveriesYear + errandTripsYear;
     const tripHours = a.tripMinutes / 60;
     const managementPersons = Math.max(1, Math.ceil(a.courierPersons / 10));
@@ -437,7 +443,7 @@ export default function ProfitLossCalculator() {
     const operatingMargin = operatingRevenue > 0 ? (operatingProfit / operatingRevenue) * 100 : 0;
     const cogsPerTrip = totalTripsYear > 0 ? cogs / totalTripsYear : 0;
 
-    return { deliveriesYear, errandTripsYear, totalTripsYear, managementPersons, regularRevenue, reducedRevenue, businessRevenue, deliveryRevenue, errandRevenue, operatingRevenue, courierBaseLabor, courierEmployerOnCosts, courierLabor, managementBaseLabor, managementEmployerOnCosts, managementLabor, carTrips, carCosts, paymentFees, operationalLoss, bikePurchaseAnnualized, cargoBikeAnnualized, cargoBikeLease, bikeEquipment, bikeMaintenance, digitalCosts, operatingOpex, contingency, eligibleCosts, regionalFundingAmount, dseeFundingAmount, totalFunding, totalCostsBeforeFunding, cogs, cogsMargin, grossProfit, grossMargin, sga, sgaMargin, fundingMargin, operatingProfit, operatingMargin, netResult, cogsPerTrip };
+    return { deliveriesMonth, errandTripsMonth, deliveriesYear, errandTripsYear, totalTripsYear, managementPersons, regularRevenue, reducedRevenue, businessRevenue, deliveryRevenue, errandRevenue, operatingRevenue, courierBaseLabor, courierEmployerOnCosts, courierLabor, managementBaseLabor, managementEmployerOnCosts, managementLabor, carTrips, carCosts, paymentFees, operationalLoss, bikePurchaseAnnualized, cargoBikeAnnualized, cargoBikeLease, bikeEquipment, bikeMaintenance, digitalCosts, operatingOpex, contingency, eligibleCosts, regionalFundingAmount, dseeFundingAmount, totalFunding, totalCostsBeforeFunding, cogs, cogsMargin, grossProfit, grossMargin, sga, sgaMargin, fundingMargin, operatingProfit, operatingMargin, netResult, cogsPerTrip };
   }, [a]);
 
   const overviewTooltips = {
@@ -478,13 +484,15 @@ export default function ProfitLossCalculator() {
             <AmountField label={t.businessAmount} amount={a.businessFee} period={a.businessFeePeriod} maxYear={3000} stepYear={50} onAmountChange={(v) => update("businessFee", v)} onPeriodChange={(p) => updatePeriod("businessFee", "businessFeePeriod", p)} tooltip="Default: €120/year." t={t} />
           </div>
           <div className="pl-pair">
-            <SliderField label={t.deliveriesMonth} value={a.deliveriesMonth} min={0} max={250} onChange={(v) => update("deliveriesMonth", v)} tooltip="Delivery revenue = deliveries/month × 12 × average delivery fee." />
+            <SliderField label={t.deliveriesPerMemberMonth} value={a.deliveriesPerMemberMonth} min={0} max={10} step={0.5} onChange={(v) => update("deliveriesPerMemberMonth", v)} tooltip="Deliveries/month = ((regular + reduced members) / 2) × this value." />
             <SliderField label={t.avgDeliveryFee} value={a.avgDeliveryFee} min={0} max={20} step={0.5} suffix="€" onChange={(v) => update("avgDeliveryFee", v)} tooltip="Average revenue per simple delivery." />
           </div>
+          <DisplayField label={t.deliveriesMonth} value={`${r.deliveriesMonth}`} tooltip="Computed: ((regular + reduced members) / 2) × deliveries per member per month." />
           <div className="pl-pair">
-            <SliderField label={t.errandTripsMonth} value={a.errandTripsMonth} min={0} max={250} onChange={(v) => update("errandTripsMonth", v)} tooltip="Errand revenue = errand trips/month × 12 × average errand fee." />
+            <SliderField label={t.errandTripsPerMemberMonth} value={a.errandTripsPerMemberMonth} min={0} max={10} step={0.5} onChange={(v) => update("errandTripsPerMemberMonth", v)} tooltip="Errand trips/month = ((regular + reduced members) / 2) × this value." />
             <SliderField label={t.avgErrandFee} value={a.avgErrandFee} min={0} max={60} step={1} suffix="€" onChange={(v) => update("avgErrandFee", v)} tooltip="Average revenue per errand trip." />
           </div>
+          <DisplayField label={t.errandTripsMonth} value={`${r.errandTripsMonth}`} tooltip="Computed: ((regular + reduced members) / 2) × errand trips per member per month." />
           <label className="pl-check" data-tooltip={lang === "de" ? DSEE_TOOLTIP_DE : DSEE_TOOLTIP_EN}>
             <input type="checkbox" checked={a.dseeFundingEnabled} onChange={(e) => update("dseeFundingEnabled", e.target.checked)} />
             <span>{t.dseeFunding}</span>
