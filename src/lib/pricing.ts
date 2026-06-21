@@ -39,7 +39,7 @@ function pseudoKm(a: string, b: string): number {
   return 0.5 + (hash % 35) / 10 // 0.5–4.0 km
 }
 
-function estimateKm(pickup: string, dropoff: string): number {
+export function estimateKm(pickup: string, dropoff: string): number {
   const c1 = COORDS[pickup]
   const c2 = COORDS[dropoff]
   if (c1 && c2) return haversineKm(c1[0], c1[1], c2[0], c2[1])
