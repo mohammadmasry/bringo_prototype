@@ -54,13 +54,33 @@ const tr = {
   },
 }
 
+function BotAvatar() {
+  return (
+    <div
+      className="w-10 h-10 rounded-full shrink-0 mt-1 overflow-hidden shadow-sm border border-green-100"
+      style={{ background: '#f0fdf4' }}
+      aria-hidden="true"
+    >
+      <img
+        src="/bot-avatar.avif"
+        alt=""
+        className="w-full h-full object-cover"
+        style={{ filter: 'hue-rotate(-120deg) saturate(1.3) brightness(1.05)' }}
+      />
+    </div>
+  )
+}
+
 function TypingDots() {
   return (
-    <div className="flex items-center gap-2 px-5 py-4 bg-white rounded-2xl rounded-tl-sm border border-gray-100 self-start shadow-sm w-24">
-      {[0, 1, 2].map((i) => (
-        <span key={i} className="w-3 h-3 rounded-full bg-gray-300 inline-block"
-          style={{ animation: `pulse 1.2s ease-in-out ${i * 0.2}s infinite` }} />
-      ))}
+    <div className="flex items-start gap-2">
+      <BotAvatar />
+      <div className="flex items-center gap-2 px-5 py-4 bg-white rounded-2xl rounded-tl-sm border border-gray-100 shadow-sm w-24">
+        {[0, 1, 2].map((i) => (
+          <span key={i} className="w-3 h-3 rounded-full bg-gray-300 inline-block"
+            style={{ animation: `pulse 1.2s ease-in-out ${i * 0.2}s infinite` }} />
+        ))}
+      </div>
     </div>
   )
 }
@@ -222,8 +242,9 @@ export default function EasyOrderPage() {
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-5 py-6 flex flex-col gap-4 max-w-xl mx-auto w-full">
         {messages.map((msg, i) => (
-          <div key={i} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
-            <div className={`text-xl leading-relaxed rounded-2xl px-6 py-4 max-w-[88%] whitespace-pre-line shadow-sm ${
+          <div key={i} className={`flex ${msg.role === 'user' ? 'flex-col items-end' : 'flex-row items-start gap-2'}`}>
+            {msg.role === 'assistant' && <BotAvatar />}
+            <div className={`text-xl leading-relaxed rounded-2xl px-6 py-4 max-w-[85%] whitespace-pre-line shadow-sm ${
               msg.role === 'user'
                 ? 'bg-green-600 text-white rounded-tr-sm'
                 : 'bg-white text-gray-900 rounded-tl-sm border border-gray-100'
