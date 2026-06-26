@@ -226,7 +226,7 @@ export default function OtpPage() {
       <div id="recaptcha-container" />
 
       {/* Top bar */}
-      <div className="flex items-center justify-between px-8 pt-7">
+      <div className="flex items-center justify-between px-4 sm:px-8 pt-7">
         <BringoLogo />
         <button
           onClick={() => navigate('/', { state: { lang } })}

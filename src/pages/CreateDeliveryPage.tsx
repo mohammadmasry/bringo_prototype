@@ -277,7 +277,7 @@ export default function CreateDeliveryPage() {
             <h1 className="text-3xl font-black text-gray-900 mb-2">{t.s4Title}</h1>
             <p className="text-gray-400 text-sm mb-6">{t.s4Sub}</p>
 
-            <div className="grid grid-cols-2 gap-3 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
               {(['now', 'later'] as const).map((type) => {
                 const selected = scheduleType === type
                 const icon = type === 'now' ? '⚡' : '📅'

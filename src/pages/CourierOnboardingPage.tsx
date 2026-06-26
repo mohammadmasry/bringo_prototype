@@ -171,7 +171,7 @@ export default function CourierOnboardingPage() {
           <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
           <span className="text-xs font-semibold text-amber-700 uppercase tracking-wide">{t.pendingBadge}</span>
         </div>
-        <h1 className="text-4xl font-black text-gray-900 mb-3">{t.s4Title}</h1>
+        <h1 className="text-3xl sm:text-4xl font-black text-gray-900 mb-3">{t.s4Title}</h1>
         <p className="text-gray-400 leading-relaxed mb-2 max-w-xs">{t.s4Sub}</p>
         <p className="text-gray-300 text-sm leading-relaxed mb-10 max-w-xs">{t.s4Note}</p>
         <button onClick={() => { setSession({ firstName, role: 'courier' }); navigate('/home/courier', { state: { firstName } }) }}

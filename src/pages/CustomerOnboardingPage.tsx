@@ -261,7 +261,7 @@ export default function CustomerOnboardingPage() {
                 </svg>
               </div>
 
-              <h1 className="text-4xl font-black text-gray-900 leading-tight mb-3">{t.s1Title}</h1>
+              <h1 className="text-3xl sm:text-4xl font-black text-gray-900 leading-tight mb-3">{t.s1Title}</h1>
               <p className="text-gray-400 mb-8">{t.s1Sub}</p>
 
               <div className="mb-4">
@@ -312,7 +312,7 @@ export default function CustomerOnboardingPage() {
             <h1 className="text-3xl font-black text-gray-900 mb-2">{t.s2Title}</h1>
             <p className="text-gray-400 text-sm mb-8">{t.s2Sub}</p>
 
-            <div className="grid grid-cols-2 gap-4 items-start mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start mb-8">
               <ModeCard
                 selected={mode === 'standard'}
                 onClick={() => setMode('standard')}

@@ -760,9 +760,9 @@ const styles = `
   .pl-kpis, .pl-breakdown { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 700px) {
-  .pl-left, .pl-right { padding: 22px; }
+  .pl-left, .pl-right { padding: 16px; }
   .pl-pair, .pl-control-grid, .pl-kpis, .pl-breakdown { grid-template-columns: 1fr; }
   .pl-topbar { margin-bottom: 18px; }
-  .pl-left h1 { font-size: 42px; }
+  .pl-left h1 { font-size: 28px; }
 }
 `;

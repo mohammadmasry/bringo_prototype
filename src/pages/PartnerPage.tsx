@@ -171,7 +171,7 @@ export default function PartnerPage() {
               style={{ borderColor: address.length > 0 ? '#16a34a' : '#e5e7eb' }} />
           </Field>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label={t.contactPerson} required>
               <input type="text" value={contactPerson} onChange={(e) => setContactPerson(e.target.value)}
                 placeholder={t.contactPersonPh}
