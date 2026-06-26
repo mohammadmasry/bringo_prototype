@@ -255,9 +255,6 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
         />
 
         <div className="relative z-10 space-y-6">
-          <div className="inline-flex bg-white/10 border border-white/10 rounded-full px-4 py-2 text-green-200 text-xs font-semibold uppercase tracking-wide">
-            {intro.leftBadge}
-          </div>
 
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white leading-tight">
             {intro.leftTitle1}
@@ -618,7 +615,7 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
                 </div>
                 <div className="flex-1">
                   <p className="font-black text-gray-900 text-lg leading-tight group-hover:text-green-700 transition-colors">
-                    {surveyLang === 'de' ? 'Einkauf & Besorgungen' : 'Shopping & Errands'}
+                    {surveyLang === 'de' ? 'Einkauf + Liefern lassen' : 'Shopping + Deliver'}
                   </p>
                   <p className="text-gray-400 text-sm mt-0.5">
                     {surveyLang === 'de'
@@ -641,7 +638,7 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
                 </div>
                 <div className="flex-1">
                   <p className="font-black text-gray-900 text-lg leading-tight group-hover:text-green-700 transition-colors">
-                    {surveyLang === 'de' ? 'Abholung & Lieferung' : 'Pickup & Delivery'}
+                    {surveyLang === 'de' ? 'Liefern lassen' : 'Delivery Only'}
                   </p>
                   <p className="text-gray-400 text-sm mt-0.5">
                     {surveyLang === 'de'
