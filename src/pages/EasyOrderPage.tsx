@@ -12,7 +12,42 @@ interface ChatMsg {
   isImage?: boolean
 }
 
+interface OrderItem {
+  id: string
+  name: string
+  qty: number
+}
+
 const PRICES: Record<'S' | 'M' | 'L', number> = { S: 3.2, M: 4.5, L: 5.8 }
+const TEMPLATE_KEY = 'bringo_order_template'
+
+function parseItems(description: string): OrderItem[] {
+  const parts = description.split(/[,;|\n]+/).map(s => s.trim()).filter(Boolean)
+  return parts.map((part, i) => {
+    let name = part
+    let qty = 1
+    const prefix = part.match(/^(\d+)\s*[x×]\s*(.+)/i)
+    if (prefix) { qty = parseInt(prefix[1]); name = prefix[2] }
+    else {
+      const suffix = part.match(/^(.+?)\s*[x×]\s*(\d+)$/i)
+      if (suffix) { qty = parseInt(suffix[2]); name = suffix[1] }
+      else {
+        const paren = part.match(/^(.+?)\s*\((\d+)\)$/)
+        if (paren) { qty = parseInt(paren[2]); name = paren[1] }
+      }
+    }
+    return { id: `${i}-${part}`, name: name.trim(), qty }
+  })
+}
+
+function saveTemplate(items: OrderItem[]) {
+  localStorage.setItem(TEMPLATE_KEY, JSON.stringify(items))
+}
+
+function loadTemplate(): OrderItem[] | null {
+  try { const d = localStorage.getItem(TEMPLATE_KEY); return d ? JSON.parse(d) : null }
+  catch { return null }
+}
 
 
 const tr = {
@@ -26,6 +61,9 @@ const tr = {
     price: 'Preis',
     manualLink: 'Lieber selbst ausfüllen?',
     categoryHint: 'Oder wählen Sie eine Kategorie:',
+    repeatOrder: 'Letzten Einkauf wiederholen?',
+    addItem: '+ Artikel hinzufügen',
+    itemsTitle: 'Bestellliste bearbeiten',
     welcome: 'Was benötigen Sie?\n\nSie können eintippen, Ihren Einkaufszettel oder Produkte abfotografieren oder Ihre Bestellung einsprechen.',
     analyzing: '🔍 Bild wird analysiert…',
     photoPrefix: '📷 Foto-Einkaufszettel:\n',
@@ -44,6 +82,9 @@ const tr = {
     price: 'Price',
     manualLink: 'Prefer to fill in the form yourself?',
     categoryHint: 'Or choose a category:',
+    repeatOrder: 'Repeat last order?',
+    addItem: '+ Add item',
+    itemsTitle: 'Edit order list',
     welcome: 'What do you need?\n\nYou can type, photograph your shopping list or products, or speak your order.',
     analyzing: '🔍 Analysing image…',
     photoPrefix: '📷 Photo shopping list:\n',
@@ -100,10 +141,19 @@ export default function EasyOrderPage() {
   const [isRecording, setIsRecording] = useState(false)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [conversationId, setConversationId] = useState<string | null>(null)
+  const [currentItems, setCurrentItems] = useState<OrderItem[] | null>(null)
+  const [savedTemplate, setSavedTemplate] = useState<OrderItem[] | null>(null)
 
   const bottomRef = useRef<HTMLDivElement>(null)
   const photoInputRef = useRef<HTMLInputElement>(null)
   const recognitionRef = useRef<{ stop: () => void } | null>(null)
+
+  useEffect(() => { setSavedTemplate(loadTemplate()) }, [])
+
+  useEffect(() => {
+    const last = messages[messages.length - 1]
+    if (last?.order) setCurrentItems(parseItems(last.order.description))
+  }, [messages])
 
   // Create a conversation record on mount
   useEffect(() => {
@@ -215,8 +265,20 @@ export default function EasyOrderPage() {
   }
 
   const handleConfirm = (order: DetectedOrder) => {
-    navigate('/create-delivery', { state: { firstName, prefill: order, conversationId } })
+    const items = currentItems ?? parseItems(order.description)
+    saveTemplate(items)
+    const description = items.map(it => `${it.qty > 1 ? `${it.qty}x ` : ''}${it.name}`).join(', ')
+    navigate('/create-delivery', { state: { firstName, prefill: { ...order, description }, conversationId } })
   }
+
+  const updateItem = (id: string, patch: Partial<OrderItem>) =>
+    setCurrentItems(prev => prev?.map(it => it.id === id ? { ...it, ...patch } : it) ?? null)
+
+  const removeItem = (id: string) =>
+    setCurrentItems(prev => prev?.filter(it => it.id !== id) ?? null)
+
+  const addItem = () =>
+    setCurrentItems(prev => prev ? [...prev, { id: `new-${Date.now()}`, name: '', qty: 1 }] : null)
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
@@ -271,9 +333,35 @@ export default function EasyOrderPage() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center justify-between pt-3 border-t border-gray-200">
-                      <p className="text-lg text-gray-600">{msg.order.description}</p>
-                      <p className="text-2xl font-black text-gray-900">€{PRICES[msg.order.size].toFixed(2)}</p>
+                    <div className="pt-3 border-t border-gray-200">
+                      <p className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-2">{t.itemsTitle}</p>
+                      <div className="space-y-1.5">
+                        {(i === messages.length - 1 && currentItems ? currentItems : parseItems(msg.order.description)).map((item) => (
+                          <div key={item.id} className="flex items-center gap-2">
+                            <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden shrink-0">
+                              <button onClick={() => updateItem(item.id, { qty: Math.max(1, item.qty - 1) })}
+                                className="w-7 h-7 flex items-center justify-center text-gray-500 hover:bg-gray-100 text-base font-bold">−</button>
+                              <span className="w-6 text-center text-sm font-bold text-gray-900">{item.qty}</span>
+                              <button onClick={() => updateItem(item.id, { qty: item.qty + 1 })}
+                                className="w-7 h-7 flex items-center justify-center text-gray-500 hover:bg-gray-100 text-base font-bold">+</button>
+                            </div>
+                            <input
+                              value={item.name}
+                              onChange={e => updateItem(item.id, { name: e.target.value })}
+                              className="flex-1 text-sm font-medium text-gray-900 bg-transparent border-b border-gray-200 focus:border-green-500 outline-none py-0.5"
+                            />
+                            <button onClick={() => removeItem(item.id)}
+                              className="text-gray-300 hover:text-red-400 shrink-0 text-lg leading-none">×</button>
+                          </div>
+                        ))}
+                      </div>
+                      <button onClick={addItem}
+                        className="mt-2 text-sm text-green-600 font-semibold hover:text-green-700">
+                        {t.addItem}
+                      </button>
+                      <div className="flex justify-end mt-2 pt-2 border-t border-gray-100">
+                        <p className="text-2xl font-black text-gray-900">€{PRICES[msg.order.size].toFixed(2)}</p>
+                      </div>
                     </div>
                   </div>
                   <button onClick={() => handleConfirm(msg.order!)}
@@ -286,6 +374,19 @@ export default function EasyOrderPage() {
             </div>
           </div>
         ))}
+
+        {messages.length === 1 && savedTemplate && savedTemplate.length > 0 && (
+          <button
+            onClick={() => {
+              setCurrentItems(savedTemplate)
+              const description = savedTemplate.map(it => `${it.qty > 1 ? `${it.qty}x ` : ''}${it.name}`).join(', ')
+              send(description)
+            }}
+            className="self-start flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-green-200 bg-green-50 text-green-700 text-sm font-semibold hover:border-green-400 transition-all"
+          >
+            🔁 {t.repeatOrder}
+          </button>
+        )}
 
         {(isLoading || isAnalyzing) && <TypingDots />}
         <div ref={bottomRef} />
