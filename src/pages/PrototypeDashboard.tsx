@@ -148,7 +148,7 @@ export default function PrototypeDashboard() {
             <span className="w-1.5 h-1.5 rounded-full bg-green-500" aria-hidden="true" />
             <span className="text-xs font-semibold text-green-700 tracking-wide uppercase">Prototype v1</span>
           </div>
-          <h1 className="text-4xl font-black text-gray-900 leading-tight mb-3">
+          <h1 className="text-3xl sm:text-4xl font-black text-gray-900 leading-tight mb-3">
             Bringo — Prototype<br />Presentation Report
           </h1>
           <p className="text-gray-500 text-base leading-relaxed">
@@ -188,7 +188,7 @@ export default function PrototypeDashboard() {
         {/* Performance */}
         <section className="mb-10">
           <h2 className="text-xl font-black text-gray-900 mb-4">Performance</h2>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {PERF_METRICS.map((m) => (
               <div key={m.label} className="bg-white rounded-2xl border border-gray-100 p-4 text-center">
                 <div className="text-2xl mb-2" aria-hidden="true">{m.icon}</div>
@@ -206,7 +206,7 @@ export default function PrototypeDashboard() {
         {/* Usability */}
         <section className="mb-10">
           <h2 className="text-xl font-black text-gray-900 mb-4">Usability</h2>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {USABILITY_METRICS.map((m) => (
               <div key={m.label} className="bg-white rounded-2xl border border-gray-100 p-4 text-center">
                 <div className="text-2xl mb-2" aria-hidden="true">{m.icon}</div>
@@ -313,7 +313,7 @@ export default function PrototypeDashboard() {
         {/* Tech stack */}
         <section className="mb-10">
           <h2 className="text-xl font-black text-gray-900 mb-4">Technical stack</h2>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {[
               { layer: 'Frontend', stack: 'React 18 + TypeScript + Vite' },
               { layer: 'Styling', stack: 'Tailwind CSS + Framer Motion' },

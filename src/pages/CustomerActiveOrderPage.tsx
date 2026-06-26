@@ -173,7 +173,7 @@ export default function CustomerActiveOrderPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h1 className="text-4xl font-black text-gray-900 mb-2">{t.delivered}</h1>
+            <h1 className="text-3xl sm:text-4xl font-black text-gray-900 mb-2">{t.delivered}</h1>
             <p className="text-gray-400 text-sm max-w-xs mx-auto leading-relaxed">{t.deliveredSub}</p>
           </div>
 

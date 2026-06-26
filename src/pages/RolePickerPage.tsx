@@ -96,7 +96,7 @@ function RoleCard({
         style={{ background: 'white', transform: 'translate(-35%, 35%)' }}
       />
 
-      <div className="relative z-10 p-8 flex flex-col h-full">
+      <div className="relative z-10 p-5 sm:p-8 flex flex-col h-full">
         {/* Icon */}
         <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center mb-5 transition-colors group-hover:bg-white/25">
           {icon}
@@ -179,7 +179,7 @@ export default function RolePickerPage() {
   return (
     <div className="min-h-screen flex flex-col" style={{ background: '#f8fafc' }}>
       {/* Navbar */}
-      <nav className="flex items-center justify-between px-8 py-5 bg-white border-b border-gray-100/80">
+      <nav className="flex items-center justify-between px-4 sm:px-8 py-5 bg-white border-b border-gray-100/80">
         <BringoLogo />
         <div className="flex items-center gap-4">
           <LangToggle />
@@ -193,11 +193,11 @@ export default function RolePickerPage() {
       </nav>
 
       {/* Content */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 py-14">
+      <div className="flex-1 flex flex-col items-center justify-center px-6 py-8 sm:py-14">
         <div className="w-full max-w-3xl">
 
           {/* Header */}
-          <div className="text-center mb-12">
+          <div className="text-center mb-6 sm:mb-12">
             <div className="inline-flex items-center gap-2 bg-white border border-gray-200 rounded-full px-3.5 py-1.5 mb-6 shadow-sm">
               <svg className="w-3.5 h-3.5 text-green-500" viewBox="0 0 24 24" fill="currentColor">
                 <path
@@ -211,7 +211,7 @@ export default function RolePickerPage() {
               </span>
             </div>
 
-            <h1 className="text-4xl font-black text-gray-900 leading-tight mb-3">
+            <h1 className="text-3xl sm:text-4xl font-black text-gray-900 leading-tight mb-3">
               {t.h1a}
               <br />
               <span className="gradient-text">{t.h1b}</span>

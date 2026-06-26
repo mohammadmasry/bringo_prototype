@@ -243,7 +243,7 @@ export default function CustomerHomePage() {
         )}
 
         {/* Info cards */}
-        <div className="grid grid-cols-2 gap-3 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
           <div className="bg-white rounded-2xl p-4 border border-gray-100">
             <div className="w-8 h-8 rounded-xl bg-blue-50 flex items-center justify-center mb-3">
               <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

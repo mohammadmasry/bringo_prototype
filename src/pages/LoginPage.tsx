@@ -259,7 +259,7 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
             {intro.leftBadge}
           </div>
 
-          <h1 className="text-4xl lg:text-5xl font-black text-white leading-tight">
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white leading-tight">
             {intro.leftTitle1}
             <br />
             {intro.leftTitle2}
@@ -321,9 +321,9 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
         </div>
       </div>
 
-      <div className="flex-1 bg-white min-h-screen flex items-center justify-center px-6 py-10">
+      <div className="flex-1 bg-white min-h-screen flex items-start md:items-center justify-center px-5 py-6 md:py-10">
         <div className="w-full max-w-[520px]">
-          <div className="flex items-center justify-end gap-3 mb-8">
+          <div className="flex items-center justify-end gap-3 mb-5 md:mb-8">
             <div
               className="inline-flex items-center bg-gray-100 rounded-full p-1 shadow-sm"
               role="group"
@@ -360,7 +360,7 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
 
           {step === 0 && (
             <motion.div
-              className="space-y-8"
+              className="space-y-5 md:space-y-8"
               initial="hidden"
               animate="visible"
               variants={{ visible: { transition: { staggerChildren: 0.12 } } }}
@@ -368,12 +368,12 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
               <motion.div
                 variants={{ hidden: { opacity: 0, y: 24 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' } } }}
               >
-                <h1 className="font-black text-gray-900 text-5xl lg:text-6xl leading-none mb-5">
+                <h1 className="font-black text-gray-900 text-3xl sm:text-4xl md:text-5xl lg:text-6xl leading-none mb-3 md:mb-5">
                   {intro.welcome}
                   <br />
                   <span className="shimmer-text">Bringo.</span>
                 </h1>
-                <p className="text-gray-500 text-xl leading-relaxed whitespace-pre-line">{intro.desc}</p>
+                <p className="text-gray-500 text-base md:text-xl leading-relaxed whitespace-pre-line">{intro.desc}</p>
               </motion.div>
 
               <motion.div
@@ -409,7 +409,7 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
               >
                 <button
                   onClick={() => setStep(2)}
-                  className="w-full py-4 rounded-xl font-semibold text-white text-base"
+                  className="w-full py-3.5 md:py-4 rounded-xl font-semibold text-white text-sm md:text-base"
                   style={{
                     background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
                     boxShadow: '0 4px 16px rgba(22,163,74,0.35)',
@@ -439,7 +439,7 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
 
           {step === 2 && (
             <div className="space-y-6">
-              <h2 className="text-4xl font-black text-gray-900">
+              <h2 className="text-2xl sm:text-4xl font-black text-gray-900">
                 {surveyLang === 'de' ? 'Textgröße anpassen' : 'Adjust text size'}
               </h2>
               <p className="text-gray-500 text-lg">
@@ -576,7 +576,7 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
           {step === 4 && (
             <div className="text-center space-y-7">
               <div className="text-7xl" aria-hidden="true">✅</div>
-              <h2 className="text-5xl font-black text-gray-900">
+              <h2 className="text-3xl sm:text-5xl font-black text-gray-900">
                 {surveyLang === 'de' ? 'Vielen Dank!' : 'Thank you!'}
               </h2>
               <p className="text-gray-500 text-xl leading-relaxed">
@@ -600,7 +600,7 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
           {step === 5 && (
             <div className="space-y-6 animate-fade-in-up">
               <div>
-                <h2 className="text-4xl font-black text-gray-900 mb-2">
+                <h2 className="text-2xl sm:text-4xl font-black text-gray-900 mb-2">
                   {surveyLang === 'de' ? 'Was möchten Sie bestellen?' : 'What would you like to order?'}
                 </h2>
                 <p className="text-gray-400 text-base">
