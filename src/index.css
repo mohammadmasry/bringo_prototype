@@ -73,3 +73,10 @@
   88%  {                          opacity: 1; }
   100% { top: calc(100% - 8px);  opacity: 0; }
 }
+
+@keyframes slideInRight {
+  0%   { transform: translateX(calc(100% + 32px)) scale(0.94); opacity: 0; }
+  60%  { transform: translateX(-6px) scale(1.01); opacity: 1; }
+  80%  { transform: translateX(3px) scale(0.995); }
+  100% { transform: translateX(0) scale(1); opacity: 1; }
+}
