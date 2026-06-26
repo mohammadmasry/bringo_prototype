@@ -318,7 +318,7 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
         </div>
       </div>
 
-      <div className="flex-1 bg-white min-h-screen flex items-start md:items-center justify-center px-5 py-6 md:py-10">
+      <div className="flex-1 bg-white min-h-screen flex items-start md:items-center justify-center px-5 py-6 md:py-10 overflow-x-hidden">
         <div className="w-full max-w-[520px]">
           <div className="flex items-center justify-end gap-3 mb-5 md:mb-8">
             <div
@@ -374,7 +374,7 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
               </motion.div>
 
               <motion.div
-                className="flex items-center gap-5"
+                className="flex flex-wrap items-center gap-x-4 gap-y-1.5"
                 variants={{ hidden: { opacity: 0, y: 24 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' } } }}
               >
                 <div className="flex items-center gap-2">
@@ -383,14 +383,14 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
                   </svg>
                   <span className="text-sm font-semibold text-green-800">{intro.groceries}</span>
                 </div>
-                <span className="w-px h-4 bg-green-200" />
+                <span className="hidden sm:block w-px h-4 bg-green-200" />
                 <div className="flex items-center gap-2">
                   <svg className="w-4 h-4 text-green-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" d="m21 7.5-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
                   </svg>
                   <span className="text-sm font-semibold text-green-800">{intro.pharmacy}</span>
                 </div>
-                <span className="w-px h-4 bg-green-200" />
+                <span className="hidden sm:block w-px h-4 bg-green-200" />
                 <div className="flex items-center gap-2">
                   <svg className="w-4 h-4 text-green-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" />
@@ -598,7 +598,7 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
             <div className="space-y-6 animate-fade-in-up">
               <div>
                 <h2 className="text-2xl sm:text-4xl font-black text-gray-900 mb-2">
-                  {surveyLang === 'de' ? 'Was möchten Sie bestellen?' : 'What would you like to order?'}
+                  {surveyLang === 'de' ? 'Was möchten Sie?' : 'What would you like?'}
                 </h2>
                 <p className="text-gray-400 text-base">
                   {surveyLang === 'de' ? 'Wählen Sie eine Option:' : 'Choose an option:'}
@@ -615,7 +615,7 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
                 </div>
                 <div className="flex-1">
                   <p className="font-black text-gray-900 text-lg leading-tight group-hover:text-green-700 transition-colors">
-                    {surveyLang === 'de' ? 'Einkauf + Liefern lassen' : 'Shopping + Deliver'}
+                    {surveyLang === 'de' ? 'Einkaufen & Liefern' : 'Shopping + Delivery'}
                   </p>
                   <p className="text-gray-400 text-sm mt-0.5">
                     {surveyLang === 'de'
@@ -638,7 +638,7 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
                 </div>
                 <div className="flex-1">
                   <p className="font-black text-gray-900 text-lg leading-tight group-hover:text-green-700 transition-colors">
-                    {surveyLang === 'de' ? 'Liefern lassen' : 'Delivery Only'}
+                    {surveyLang === 'de' ? 'nur liefern' : 'Delivery'}
                   </p>
                   <p className="text-gray-400 text-sm mt-0.5">
                     {surveyLang === 'de'

@@ -1,37 +1,39 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import BringoLogo from '../components/BringoLogo'
 import LangToggle from '../components/LangToggle'
 import { useLang } from '../hooks/useLang'
 import ComingSoonSheet from '../components/ComingSoonSheet'
 import { calculatePrice } from '../lib/pricing'
+import DeliveryMap, { type Coords } from '../components/DeliveryMap'
 
+// Preset addresses with approximate Pfarrkirchen coords
 const PICKUP_PRESETS = [
-  'CAMPUS Pfarrkirchen, Petersbogen 1',
-  'Bahnhof Pfarrkirchen, Bahnhofstr. 1',
-  'Edeka, Griesbacher Str. 3',
-  'Stadtplatz 1, 84347 Pfarrkirchen',
+  { label: 'CAMPUS Pfarrkirchen, Petersbogen 1', lat: 48.4352, lon: 12.9512 },
+  { label: 'Bahnhof Pfarrkirchen, Bahnhofstr. 1', lat: 48.4381, lon: 12.9438 },
+  { label: 'Edeka, Griesbacher Str. 3', lat: 48.4393, lon: 12.9519 },
+  { label: 'Stadtplatz 1, 84347 Pfarrkirchen', lat: 48.4369, lon: 12.9480 },
 ]
 
 const DROPOFF_PRESETS = [
-  'Stadtplatz 12, 84347 Pfarrkirchen',
-  'Ludwigstraße 8, 84347 Pfarrkirchen',
-  'Ringstraße 44, 84347 Pfarrkirchen',
-  'Kirchgasse 5, 84347 Pfarrkirchen',
+  { label: 'Stadtplatz 12, 84347 Pfarrkirchen', lat: 48.4371, lon: 12.9487 },
+  { label: 'Ludwigstraße 8, 84347 Pfarrkirchen', lat: 48.4358, lon: 12.9466 },
+  { label: 'Ringstraße 44, 84347 Pfarrkirchen', lat: 48.4336, lon: 12.9503 },
+  { label: 'Kirchgasse 5, 84347 Pfarrkirchen', lat: 48.4364, lon: 12.9473 },
 ]
-
 
 const TIME_SLOTS = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00']
 
 const tr = {
   de: {
-    s1Title: 'Abholung', s1Sub: 'Wo soll Ihr Artikel abgeholt werden?',
-    s2Title: 'Zielort', s2Sub: 'Wohin soll Ihr Artikel geliefert werden?',
+    s1Title: 'Abholung', s1Sub: 'Wo soll Ihr Paket abgeholt werden?',
+    s2Title: 'Zielort', s2Sub: 'Wohin soll Ihr Paket geliefert werden?',
     s3Title: 'Was wird geliefert?', s3Sub: 'Beschreiben Sie Ihren Artikel für den Kurier.',
     s4Title: 'Wann?', s4Sub: 'Soll die Lieferung jetzt oder später erfolgen?',
     s5Title: 'Bestellung prüfen', s5Sub: 'Alles korrekt?',
     pickupLabel: 'Abholadresse', dropoffLabel: 'Lieferadresse',
     orChoose: 'oder schnell wählen:',
+    searchPh: 'Adresse eingeben…',
     noteLabel: 'Nachricht an den Kurier', notePh: 'z.B. "3. OG, Klingel Schmidt"',
     optional: 'optional',
     sizeLabel: 'Paketgröße',
@@ -49,15 +51,17 @@ const tr = {
     dateLabel: 'Datum', timeLabel: 'Uhrzeit',
     when: 'Wann', asap: 'Sofort',
     priceBase: 'Grundpreis', priceDist: 'Entfernung', pricePeak: 'Stoßzeit', priceTotal: 'Gesamt',
+    searching: 'Suche…',
   },
   en: {
     s1Title: 'Pickup', s1Sub: 'Where should your item be picked up from?',
-    s2Title: 'Dropoff', s2Sub: 'Where should your item be delivered to?',
+    s2Title: 'Dropoff', s2Sub: 'Where should your item be delivered?',
     s3Title: 'What are you sending?', s3Sub: 'Describe your item for the courier.',
     s4Title: 'When?', s4Sub: 'Should delivery happen now or later?',
     s5Title: 'Review order', s5Sub: 'Everything look right?',
     pickupLabel: 'Pickup address', dropoffLabel: 'Delivery address',
     orChoose: 'or choose quickly:',
+    searchPh: 'Enter address…',
     noteLabel: 'Message for courier', notePh: 'e.g. "3rd floor, ring Schmidt"',
     optional: 'optional',
     sizeLabel: 'Package size',
@@ -75,6 +79,7 @@ const tr = {
     dateLabel: 'Date', timeLabel: 'Time',
     when: 'When', asap: 'ASAP',
     priceBase: 'Base price', priceDist: 'Distance', pricePeak: 'Peak hour', priceTotal: 'Total',
+    searching: 'Searching…',
   },
 }
 
@@ -84,22 +89,97 @@ const SIZE_COLORS: Record<'S' | 'M' | 'L', { bg: string; text: string }> = {
   L: { bg: '#fef3c7', text: '#d97706' },
 }
 
+interface NomResult {
+  place_id: number
+  display_name: string
+  lat: string
+  lon: string
+  address?: { road?: string; house_number?: string; city?: string; town?: string; village?: string; postcode?: string }
+}
+
+function formatNom(r: NomResult): string {
+  const a = r.address
+  if (!a) return r.display_name.split(',').slice(0, 3).join(',')
+  const parts = [
+    a.road && a.house_number ? `${a.road} ${a.house_number}` : a.road,
+    a.city ?? a.town ?? a.village,
+    a.postcode,
+  ].filter(Boolean)
+  return parts.length ? parts.join(', ') : r.display_name.split(',').slice(0, 2).join(',')
+}
+
 export default function CreateDeliveryPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const { lang } = useLang()
   const t = tr[lang]
+
   const state = (location.state as { prefill?: { pickup: string; dropoff: string; description: string; size: 'S' | 'M' | 'L' } } | null)
   const prefill = state?.prefill
 
   const [step, setStep] = useState(prefill ? 5 : 1)
   const [pickup, setPickup] = useState(prefill?.pickup ?? '')
   const [dropoff, setDropoff] = useState(prefill?.dropoff ?? '')
+  const [pickupCoords, setPickupCoords] = useState<Coords | null>(null)
+  const [dropoffCoords, setDropoffCoords] = useState<Coords | null>(null)
   const [size, setSize] = useState<'S' | 'M' | 'L'>(prefill?.size ?? 'M')
   const [note, setNote] = useState('')
   const [scheduleType, setScheduleType] = useState<'now' | 'later'>('now')
   const [scheduleDate, setScheduleDate] = useState('')
   const [scheduleTime, setScheduleTime] = useState('')
+
+  // Nominatim autocomplete
+  const [pickupSugs, setPickupSugs] = useState<NomResult[]>([])
+  const [dropoffSugs, setDropoffSugs] = useState<NomResult[]>([])
+  const [pickupFocused, setPickupFocused] = useState(false)
+  const [dropoffFocused, setDropoffFocused] = useState(false)
+  const pickupTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const dropoffTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    if (pickupTimer.current) clearTimeout(pickupTimer.current)
+    if (pickup.length < 3 || pickupCoords) { setPickupSugs([]); return }
+    pickupTimer.current = setTimeout(async () => {
+      try {
+        const r = await fetch(
+          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(pickup)}&format=json&limit=5&countrycodes=de&addressdetails=1`,
+          { headers: { 'Accept-Language': lang } }
+        )
+        setPickupSugs(await r.json())
+      } catch { setPickupSugs([]) }
+    }, 380)
+  }, [pickup])
+
+  useEffect(() => {
+    if (dropoffTimer.current) clearTimeout(dropoffTimer.current)
+    if (dropoff.length < 3 || dropoffCoords) { setDropoffSugs([]); return }
+    dropoffTimer.current = setTimeout(async () => {
+      try {
+        const r = await fetch(
+          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(dropoff)}&format=json&limit=5&countrycodes=de&addressdetails=1`,
+          { headers: { 'Accept-Language': lang } }
+        )
+        setDropoffSugs(await r.json())
+      } catch { setDropoffSugs([]) }
+    }, 380)
+  }, [dropoff])
+
+  const selectPickup = (label: string, coords: Coords) => {
+    setPickup(label)
+    setPickupCoords(coords)
+    setPickupSugs([])
+  }
+
+  const selectDropoff = (label: string, coords: Coords) => {
+    setDropoff(label)
+    setDropoffCoords(coords)
+    setDropoffSugs([])
+  }
+
+  const handleMapClick = (lat: number, lon: number, address: string) => {
+    if (step === 1) selectPickup(address, { lat, lon })
+    else if (step === 2) selectDropoff(address, { lat, lon })
+  }
 
   const canContinue =
     step === 1 ? pickup.trim().length >= 5
@@ -107,165 +187,263 @@ export default function CreateDeliveryPage() {
     : step === 4 ? scheduleType === 'now' || (scheduleDate !== '' && scheduleTime !== '')
     : true
 
-  const goNext = () => {
-    if (step < 5) setStep((s) => s + 1)
-    else setStep(6)
-  }
-
-  const goBack = () => {
-    if (step > 1) setStep((s) => s - 1)
-    else navigate('/')
-  }
+  const goNext = () => { if (step < 5) setStep(s => s + 1); else setStep(6) }
+  const goBack = () => { if (step > 1) setStep(s => s - 1); else navigate('/') }
 
   if (step === 6) {
     return <ComingSoonSheet onBack={() => setStep(5)} showFeedback feedbackPage="create-delivery" />
   }
 
-  return (
-    <div className="min-h-screen bg-white flex flex-col">
-      <div className="flex items-center gap-3 px-6 pt-7 pb-4 border-b border-gray-100">
-        <button
-          onClick={goBack}
-          aria-label={t.back}
-          className="w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors shrink-0"
-        >
-          <svg className="w-4 h-4 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
-          </svg>
-        </button>
-        <div className="flex-1" />
-        <BringoLogo />
-        <div className="flex-1" />
-        <LangToggle />
-      </div>
+  // Shared step progress bar
+  const stepBar = (
+    <div className="flex gap-1.5 mb-6" role="progressbar" aria-valuenow={step} aria-valuemin={1} aria-valuemax={5}>
+      {[0,1,2,3,4].map(i => (
+        <div key={i} className="flex-1 h-1.5 rounded-full transition-all duration-500"
+          style={{ background: i < step ? '#16a34a' : '#e5e7eb' }} />
+      ))}
+    </div>
+  )
 
-      <div className="flex-1 flex flex-col px-6 max-w-lg mx-auto w-full pb-10 pt-8">
-        {/* Step bar */}
-        <div className="flex gap-1.5 mb-8" role="progressbar" aria-valuenow={step} aria-valuemin={1} aria-valuemax={5} aria-label={t.stepOf(step)}>
-          {[0, 1, 2, 3, 4].map((i) => (
-            <div
-              key={i}
-              className="flex-1 h-1.5 rounded-full transition-all duration-500"
-              style={{ background: i < step ? '#16a34a' : '#e5e7eb' }}
-            />
-          ))}
+  // Shared address input with autocomplete dropdown
+  const AddressField = ({
+    id, value, onChange, onFocus, onBlur, placeholder, label,
+    suggestions, onSelect, presets, coordsSet,
+  }: {
+    id: string
+    value: string
+    onChange: (v: string) => void
+    onFocus: () => void
+    onBlur: () => void
+    placeholder: string
+    label: string
+    suggestions: NomResult[]
+    onSelect: (label: string, coords: Coords) => void
+    presets: typeof PICKUP_PRESETS
+    coordsSet: boolean
+  }) => (
+    <div>
+      <label className="block text-sm font-semibold text-gray-700 mb-2" htmlFor={id}>{label}</label>
+      <div className="relative">
+        <div className="relative">
+          <input
+            id={id}
+            type="text"
+            value={value}
+            autoComplete="off"
+            onChange={e => { onChange(e.target.value); if (coordsSet) { if (id.startsWith('pickup')) setPickupCoords(null); else setDropoffCoords(null) } }}
+            onFocus={onFocus}
+            onBlur={() => setTimeout(onBlur, 150)}
+            placeholder={placeholder}
+            className="w-full pl-10 pr-4 py-3.5 rounded-xl border-2 outline-none text-gray-900 placeholder-gray-300 text-base font-medium bg-white transition-colors"
+            style={{ borderColor: value.length > 0 ? (coordsSet ? '#16a34a' : '#f59e0b') : '#e5e7eb' }}
+          />
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+          </svg>
+          {coordsSet && (
+            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+              <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
+                <svg className="w-3 h-3 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+            </div>
+          )}
         </div>
 
-        {step === 1 && (
-          <div className="animate-fade-in-up">
-            <p className="text-xs font-semibold text-green-600 uppercase tracking-wider mb-1">{t.stepOf(1)}</p>
-            <h1 className="text-3xl font-black text-gray-900 mb-2">{t.s1Title}</h1>
-            <p className="text-gray-400 text-sm mb-6">{t.s1Sub}</p>
-            <label className="block text-sm font-semibold text-gray-700 mb-2" htmlFor="pickup-input">{t.pickupLabel}</label>
-            <input
-              id="pickup-input"
-              type="text"
-              value={pickup}
-              onChange={(e) => setPickup(e.target.value)}
-              placeholder="CAMPUS Pfarrkirchen…"
-              autoFocus
-              className="w-full px-4 py-3.5 rounded-xl border-2 outline-none text-gray-900 placeholder-gray-300 text-base font-medium bg-white transition-colors mb-4"
-              style={{ borderColor: pickup.length > 0 ? '#16a34a' : '#e5e7eb' }}
-            />
-            <p className="text-xs text-gray-400 mb-3">{t.orChoose}</p>
-            <div className="space-y-2" role="group" aria-label={t.pickupLabel}>
-              {PICKUP_PRESETS.map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setPickup(p)}
-                  aria-pressed={pickup === p}
-                  className="w-full text-left px-4 py-3 rounded-xl border-2 text-sm font-medium transition-all"
-                  style={{
-                    borderColor: pickup === p ? '#16a34a' : '#f3f4f6',
-                    background: pickup === p ? '#f0fdf4' : '#f9fafb',
-                    color: pickup === p ? '#15803d' : '#374151',
-                  }}
-                >
-                  {p}
-                </button>
-              ))}
-            </div>
+        {/* Nominatim dropdown */}
+        {suggestions.length > 0 && (
+          <div className="absolute z-[2000] left-0 right-0 top-full mt-1 bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden">
+            {suggestions.map(r => (
+              <button
+                key={r.place_id}
+                onMouseDown={() => onSelect(formatNom(r), { lat: parseFloat(r.lat), lon: parseFloat(r.lon) })}
+                className="w-full text-left px-4 py-3 text-sm hover:bg-green-50 transition-colors flex items-start gap-3 border-b border-gray-50 last:border-0"
+              >
+                <svg className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+                </svg>
+                <span className="text-gray-700 leading-tight">{formatNom(r)}</span>
+              </button>
+            ))}
           </div>
         )}
+      </div>
 
-        {step === 2 && (
-          <div className="animate-fade-in-up">
-            <p className="text-xs font-semibold text-green-600 uppercase tracking-wider mb-1">{t.stepOf(2)}</p>
-            <h1 className="text-3xl font-black text-gray-900 mb-2">{t.s2Title}</h1>
-            <p className="text-gray-400 text-sm mb-6">{t.s2Sub}</p>
-            <label className="block text-sm font-semibold text-gray-700 mb-2" htmlFor="dropoff-input">{t.dropoffLabel}</label>
-            <input
-              id="dropoff-input"
-              type="text"
-              value={dropoff}
-              onChange={(e) => setDropoff(e.target.value)}
-              placeholder="Stadtplatz 12…"
-              autoFocus
-              className="w-full px-4 py-3.5 rounded-xl border-2 outline-none text-gray-900 placeholder-gray-300 text-base font-medium bg-white transition-colors mb-4"
-              style={{ borderColor: dropoff.length > 0 ? '#16a34a' : '#e5e7eb' }}
-            />
-            <p className="text-xs text-gray-400 mb-3">{t.orChoose}</p>
-            <div className="space-y-2" role="group" aria-label={t.dropoffLabel}>
-              {DROPOFF_PRESETS.map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setDropoff(p)}
-                  aria-pressed={dropoff === p}
-                  className="w-full text-left px-4 py-3 rounded-xl border-2 text-sm font-medium transition-all"
-                  style={{
-                    borderColor: dropoff === p ? '#16a34a' : '#f3f4f6',
-                    background: dropoff === p ? '#f0fdf4' : '#f9fafb',
-                    color: dropoff === p ? '#15803d' : '#374151',
-                  }}
-                >
-                  {p}
-                </button>
-              ))}
-            </div>
+      <p className="text-xs text-gray-400 mt-3 mb-2">{t.orChoose}</p>
+      <div className="space-y-1.5" role="group">
+        {presets.map(p => (
+          <button
+            key={p.label}
+            onClick={() => onSelect(p.label, { lat: p.lat, lon: p.lon })}
+            className="w-full text-left px-3.5 py-2.5 rounded-xl border-2 text-sm font-medium transition-all flex items-center gap-2.5"
+            style={{
+              borderColor: value === p.label ? '#16a34a' : '#f3f4f6',
+              background: value === p.label ? '#f0fdf4' : '#f9fafb',
+              color: value === p.label ? '#15803d' : '#374151',
+            }}
+          >
+            <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} style={{ color: value === p.label ? '#16a34a' : '#9ca3af' }}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+            </svg>
+            {p.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+
+  const continueBtn = (
+    <div className="mt-auto pt-6">
+      <button
+        onClick={goNext}
+        disabled={!canContinue}
+        className="w-full py-4 rounded-xl font-semibold text-base flex items-center justify-center gap-2 group transition-all duration-200"
+        style={{
+          background: canContinue ? 'linear-gradient(135deg,#16a34a,#15803d)' : '#f3f4f6',
+          color: canContinue ? 'white' : '#9ca3af',
+          boxShadow: canContinue ? '0 4px 16px rgba(22,163,74,0.35)' : 'none',
+        }}
+      >
+        {t.continue}
+        <svg className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+        </svg>
+      </button>
+    </div>
+  )
+
+  const navbar = (
+    <div className="flex items-center gap-3 px-5 pt-5 pb-4 border-b border-gray-100 bg-white z-10 shrink-0">
+      <button
+        onClick={goBack}
+        aria-label={t.back}
+        className="w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors shrink-0"
+      >
+        <svg className="w-4 h-4 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+        </svg>
+      </button>
+      <div className="flex-1" />
+      <BringoLogo />
+      <div className="flex-1" />
+      <LangToggle />
+    </div>
+  )
+
+  // Steps 1 and 2 — map layout
+  if (step === 1 || step === 2) {
+    return (
+      <div className="min-h-screen bg-white flex flex-col">
+        {navbar}
+        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden" style={{ minHeight: 0 }}>
+
+          {/* Left — form */}
+          <div className="lg:w-[420px] lg:shrink-0 flex flex-col px-5 pt-6 pb-5 overflow-y-auto lg:border-r lg:border-gray-100">
+            {stepBar}
+
+            {step === 1 && (
+              <div className="animate-fade-in-up flex-1 flex flex-col">
+                <p className="text-xs font-semibold text-green-600 uppercase tracking-wider mb-1">{t.stepOf(1)}</p>
+                <h1 className="text-2xl font-black text-gray-900 mb-1">{t.s1Title}</h1>
+                <p className="text-gray-400 text-sm mb-5">{t.s1Sub}</p>
+                <AddressField
+                  id="pickup-input"
+                  value={pickup}
+                  onChange={v => setPickup(v)}
+                  onFocus={() => setPickupFocused(true)}
+                  onBlur={() => setPickupFocused(false)}
+                  placeholder={t.searchPh}
+                  label={t.pickupLabel}
+                  suggestions={pickupFocused ? pickupSugs : []}
+                  onSelect={selectPickup}
+                  presets={PICKUP_PRESETS}
+                  coordsSet={!!pickupCoords}
+                />
+                {continueBtn}
+              </div>
+            )}
+
+            {step === 2 && (
+              <div className="animate-fade-in-up flex-1 flex flex-col">
+                <p className="text-xs font-semibold text-green-600 uppercase tracking-wider mb-1">{t.stepOf(2)}</p>
+                <h1 className="text-2xl font-black text-gray-900 mb-1">{t.s2Title}</h1>
+                <p className="text-gray-400 text-sm mb-5">{t.s2Sub}</p>
+                <AddressField
+                  id="dropoff-input"
+                  value={dropoff}
+                  onChange={v => setDropoff(v)}
+                  onFocus={() => setDropoffFocused(true)}
+                  onBlur={() => setDropoffFocused(false)}
+                  placeholder={t.searchPh}
+                  label={t.dropoffLabel}
+                  suggestions={dropoffFocused ? dropoffSugs : []}
+                  onSelect={selectDropoff}
+                  presets={DROPOFF_PRESETS}
+                  coordsSet={!!dropoffCoords}
+                />
+                {continueBtn}
+              </div>
+            )}
           </div>
-        )}
+
+          {/* Right — map (stacks below on mobile, full height on desktop) */}
+          <div className="flex-1 relative" style={{ minHeight: '45vh' }}>
+            <DeliveryMap
+              pickupCoords={pickupCoords}
+              dropoffCoords={step === 2 ? dropoffCoords : null}
+              activePin={step === 1 ? 'pickup' : 'dropoff'}
+              onMapClick={handleMapClick}
+              pickupAddress={pickup}
+              dropoffAddress={dropoff}
+              lang={lang}
+            />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Steps 3–5 — single column
+  return (
+    <div className="min-h-screen bg-white flex flex-col">
+      {navbar}
+      <div className="flex-1 flex flex-col px-6 max-w-lg mx-auto w-full pb-10 pt-8">
+        {stepBar}
 
         {step === 3 && (
           <div className="animate-fade-in-up">
             <p className="text-xs font-semibold text-green-600 uppercase tracking-wider mb-1">{t.stepOf(3)}</p>
             <h1 className="text-3xl font-black text-gray-900 mb-2">{t.s3Title}</h1>
             <p className="text-gray-400 text-sm mb-6">{t.s3Sub}</p>
-
             <p className="text-sm font-semibold text-gray-700 mb-3">{t.sizeLabel}</p>
-            <div className="grid grid-cols-3 gap-2 mb-5" role="group" aria-label={t.sizeLabel}>
-              {(['S', 'M', 'L'] as const).map((s) => {
+            <div className="grid grid-cols-3 gap-2 mb-5">
+              {(['S', 'M', 'L'] as const).map(s => {
                 const selected = size === s
                 const title = s === 'S' ? t.sSmallTitle : s === 'M' ? t.sMediumTitle : t.sLargeTitle
                 const sub = s === 'S' ? t.sSmallSub : s === 'M' ? t.sMediumSub : t.sLargeSub
                 const emoji = s === 'S' ? '📄' : s === 'M' ? '📦' : '🗃️'
                 return (
-                  <button
-                    key={s}
-                    onClick={() => setSize(s)}
-                    aria-pressed={selected}
+                  <button key={s} onClick={() => setSize(s)}
                     className="p-4 rounded-xl border-2 text-left transition-all"
-                    style={{
-                      borderColor: selected ? '#16a34a' : '#e5e7eb',
-                      background: selected ? '#f0fdf4' : 'white',
-                    }}
+                    style={{ borderColor: selected ? '#16a34a' : '#e5e7eb', background: selected ? '#f0fdf4' : 'white' }}
                   >
-                    <p className="text-2xl mb-1" aria-hidden="true">{emoji}</p>
+                    <p className="text-2xl mb-1">{emoji}</p>
                     <p className="text-sm font-bold" style={{ color: selected ? '#15803d' : '#111827' }}>{title}</p>
                     <p className="text-xs text-gray-400 mt-0.5 leading-tight">{sub}</p>
                   </button>
                 )
               })}
             </div>
-
             <label className="block text-sm font-semibold text-gray-700 mb-1" htmlFor="courier-note">
               {t.noteLabel} <span className="font-normal text-gray-400">({t.optional})</span>
             </label>
             <textarea
-              id="courier-note"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder={t.notePh}
-              rows={2}
+              id="courier-note" value={note} onChange={e => setNote(e.target.value)}
+              placeholder={t.notePh} rows={2}
               className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-green-600 outline-none text-gray-900 placeholder-gray-300 text-sm font-medium bg-white transition-colors resize-none"
             />
           </div>
@@ -276,32 +454,25 @@ export default function CreateDeliveryPage() {
             <p className="text-xs font-semibold text-green-600 uppercase tracking-wider mb-1">{t.stepOf(4)}</p>
             <h1 className="text-3xl font-black text-gray-900 mb-2">{t.s4Title}</h1>
             <p className="text-gray-400 text-sm mb-6">{t.s4Sub}</p>
-
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
-              {(['now', 'later'] as const).map((type) => {
+              {(['now', 'later'] as const).map(type => {
                 const selected = scheduleType === type
-                const icon = type === 'now' ? '⚡' : '📅'
-                const title = type === 'now' ? t.nowTitle : t.laterTitle
-                const sub = type === 'now' ? t.nowSub : t.laterSub
                 return (
-                  <button
-                    key={type}
-                    onClick={() => setScheduleType(type)}
-                    aria-pressed={selected}
+                  <button key={type} onClick={() => setScheduleType(type)}
                     className="p-5 rounded-2xl border-2 text-left transition-all"
-                    style={{
-                      borderColor: selected ? '#16a34a' : '#e5e7eb',
-                      background: selected ? '#f0fdf4' : 'white',
-                    }}
+                    style={{ borderColor: selected ? '#16a34a' : '#e5e7eb', background: selected ? '#f0fdf4' : 'white' }}
                   >
-                    <p className="text-2xl mb-2" aria-hidden="true">{icon}</p>
-                    <p className="text-sm font-bold" style={{ color: selected ? '#15803d' : '#111827' }}>{title}</p>
-                    <p className="text-xs text-gray-400 mt-0.5 leading-tight">{sub}</p>
+                    <p className="text-2xl mb-2">{type === 'now' ? '⚡' : '📅'}</p>
+                    <p className="text-sm font-bold" style={{ color: selected ? '#15803d' : '#111827' }}>
+                      {type === 'now' ? t.nowTitle : t.laterTitle}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-0.5 leading-tight">
+                      {type === 'now' ? t.nowSub : t.laterSub}
+                    </p>
                   </button>
                 )
               })}
             </div>
-
             {scheduleType === 'later' && (
               <div className="space-y-5">
                 <div>
@@ -311,22 +482,14 @@ export default function CreateDeliveryPage() {
                       const d = new Date(Date.now() + i * 24 * 60 * 60 * 1000)
                       const iso = d.toISOString().split('T')[0]
                       const dayName = d.toLocaleDateString(lang === 'de' ? 'de-DE' : 'en-GB', { weekday: 'short' })
-                      const dayNum = d.getDate()
                       const selected = scheduleDate === iso
                       return (
-                        <button
-                          key={iso}
-                          onClick={() => setScheduleDate(iso)}
-                          aria-pressed={selected}
+                        <button key={iso} onClick={() => setScheduleDate(iso)}
                           className="flex flex-col items-center shrink-0 w-12 py-2.5 rounded-xl border-2 transition-all"
-                          style={{
-                            borderColor: selected ? '#16a34a' : '#e5e7eb',
-                            background: selected ? '#f0fdf4' : 'white',
-                            color: selected ? '#15803d' : '#374151',
-                          }}
+                          style={{ borderColor: selected ? '#16a34a' : '#e5e7eb', background: selected ? '#f0fdf4' : 'white', color: selected ? '#15803d' : '#374151' }}
                         >
                           <span className="text-xs font-semibold">{dayName}</span>
-                          <span className="text-base font-black">{dayNum}</span>
+                          <span className="text-base font-black">{d.getDate()}</span>
                         </button>
                       )
                     })}
@@ -335,17 +498,10 @@ export default function CreateDeliveryPage() {
                 <div>
                   <p className="text-sm font-semibold text-gray-700 mb-3">{t.timeLabel}</p>
                   <div className="grid grid-cols-4 gap-2">
-                    {TIME_SLOTS.map((slot) => (
-                      <button
-                        key={slot}
-                        onClick={() => setScheduleTime(slot)}
-                        aria-pressed={scheduleTime === slot}
+                    {TIME_SLOTS.map(slot => (
+                      <button key={slot} onClick={() => setScheduleTime(slot)}
                         className="py-2.5 rounded-xl text-sm font-semibold border-2 transition-all"
-                        style={{
-                          borderColor: scheduleTime === slot ? '#16a34a' : '#e5e7eb',
-                          background: scheduleTime === slot ? '#f0fdf4' : 'white',
-                          color: scheduleTime === slot ? '#15803d' : '#374151',
-                        }}
+                        style={{ borderColor: scheduleTime === slot ? '#16a34a' : '#e5e7eb', background: scheduleTime === slot ? '#f0fdf4' : 'white', color: scheduleTime === slot ? '#15803d' : '#374151' }}
                       >
                         {slot}
                       </button>
@@ -362,16 +518,12 @@ export default function CreateDeliveryPage() {
             <p className="text-xs font-semibold text-green-600 uppercase tracking-wider mb-1">{t.stepOf(5)}</p>
             <h1 className="text-3xl font-black text-gray-900 mb-2">{t.s5Title}</h1>
             <p className="text-gray-400 text-sm mb-6">{t.s5Sub}</p>
-
             <div className="bg-gray-50 rounded-2xl p-5 mb-4">
               <div className="flex gap-3 mb-5">
                 <div className="flex flex-col items-center pt-0.5 shrink-0">
                   <div className="w-3 h-3 rounded-full bg-green-500" />
-                  <div
-                    className="w-px flex-1 my-1.5 border-l-2 border-dashed border-gray-300"
-                    style={{ minHeight: 28 }}
-                  />
-                  <div className="w-3 h-3 rounded-full bg-gray-400" />
+                  <div className="w-px flex-1 my-1.5 border-l-2 border-dashed border-gray-300" style={{ minHeight: 28 }} />
+                  <div className="w-3 h-3 rounded-full bg-blue-600" />
                 </div>
                 <div className="flex flex-col justify-between flex-1 gap-3">
                   <div>
@@ -384,15 +536,10 @@ export default function CreateDeliveryPage() {
                   </div>
                 </div>
               </div>
-
               <div className="flex items-center gap-3 pt-4 border-t border-gray-200">
-                <div className="flex-1">
-                  {note ? <p className="text-sm text-gray-500">{note}</p> : null}
-                </div>
-                <span
-                  className="text-sm font-bold px-2.5 py-1 rounded-full shrink-0"
-                  style={{ background: SIZE_COLORS[size].bg, color: SIZE_COLORS[size].text }}
-                >
+                <div className="flex-1">{note && <p className="text-sm text-gray-500">{note}</p>}</div>
+                <span className="text-sm font-bold px-2.5 py-1 rounded-full shrink-0"
+                  style={{ background: SIZE_COLORS[size].bg, color: SIZE_COLORS[size].text }}>
                   {size === 'S' ? t.smallLabel : size === 'M' ? t.mediumLabel : t.largeLabel}
                 </span>
               </div>
@@ -424,7 +571,7 @@ export default function CreateDeliveryPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 px-5 py-3 bg-gray-50 border-t border-gray-100">
-                    <span className="text-base" aria-hidden="true">{scheduleType === 'now' ? '⚡' : '📅'}</span>
+                    <span className="text-base">{scheduleType === 'now' ? '⚡' : '📅'}</span>
                     <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{t.when}:</p>
                     <p className="text-sm font-bold text-gray-900">
                       {scheduleType === 'now' ? t.asap : `${scheduleDate} · ${scheduleTime}`}
@@ -436,23 +583,7 @@ export default function CreateDeliveryPage() {
           </div>
         )}
 
-        <div className="mt-auto pt-8">
-          <button
-            onClick={goNext}
-            disabled={!canContinue}
-            className="w-full py-4 rounded-xl font-semibold text-base flex items-center justify-center gap-2 group transition-all duration-200"
-            style={{
-              background: canContinue ? 'linear-gradient(135deg, #16a34a, #15803d)' : '#f3f4f6',
-              color: canContinue ? 'white' : '#9ca3af',
-              boxShadow: canContinue ? '0 4px 16px rgba(22,163,74,0.35)' : 'none',
-            }}
-          >
-            {t.continue}
-            <svg className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-            </svg>
-          </button>
-        </div>
+        {continueBtn}
       </div>
     </div>
   )
