@@ -243,7 +243,7 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
         background: 'linear-gradient(150deg, #0d3d1e 0%, #14532d 35%, #166534 70%, #16a34a 100%)',
       }}
     >
-      <div className="hidden md:flex md:w-[45%] relative flex-col justify-between p-10 lg:p-14 overflow-hidden">
+      <div className="hidden md:flex md:w-[45%] relative flex-col justify-center p-10 lg:p-14 overflow-hidden">
         <motion.div
           className="absolute inset-0 pointer-events-none"
           animate={{ opacity: [0.3, 1, 0.3] }}
@@ -253,8 +253,6 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
             backgroundSize: '28px 28px',
           }}
         />
-
-        <div className="relative z-10" />
 
         <div className="relative z-10 space-y-6">
           <div className="inline-flex bg-white/10 border border-white/10 rounded-full px-4 py-2 text-green-200 text-xs font-semibold uppercase tracking-wide">
@@ -296,7 +294,7 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
           </div>
         </div>
 
-        <div className="relative z-10 flex flex-col gap-2">
+        <div className="absolute bottom-10 left-10 lg:left-14 z-10 flex flex-col gap-2">
           <button
             onClick={() => (window.location.href = '/partner')}
             className="flex items-center gap-2 text-white/50 hover:text-white transition-colors group w-fit"
@@ -373,7 +371,7 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
                 <h1 className="font-black text-gray-900 text-5xl lg:text-6xl leading-none mb-5">
                   {intro.welcome}
                   <br />
-                  <span className="gradient-text">Bringo.</span>
+                  <span className="shimmer-text">Bringo.</span>
                 </h1>
                 <p className="text-gray-500 text-xl leading-relaxed whitespace-pre-line">{intro.desc}</p>
               </motion.div>
