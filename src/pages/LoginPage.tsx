@@ -160,50 +160,43 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
   const [questionIndex, setQuestionIndex] = useState(0)
   const [answers, setAnswers] = useState<Record<number, string | string[]>>({})
   const [comment, setComment] = useState('')
+  const [showSurveyBanner, setShowSurveyBanner] = useState(false)
+
+  useEffect(() => {
+    if (step !== 0) return
+    const t = setTimeout(() => setShowSurveyBanner(true), 3000)
+    return () => clearTimeout(t)
+  }, [step])
 
   const introText = {
     en: {
-      badge: 'Quick feedback',
-      leftBadge: 'Service Survey',
-      leftTitle1: 'Help shape',
-      leftTitle2: 'local deliveries',
-      leftTitle3: 'for real users.',
       leftDesc:
         'Bringo supports people with groceries, pharmacy visits, restaurant orders, and everyday errands – local, fast, and straightforward.',
-      time: '2 minutes',
-      anonymous: 'Anonymous',
-      studentLed: 'Student-led',
       welcome: 'Welcome to',
-      desc:
-        'Bringo connects people who need help with local errands to verified student couriers nearby.\n\nBefore you sign up, we would like to ask a few quick questions so we can improve the service for real users.',
       groceries: 'Groceries',
       pharmacy: 'Deliveries',
       errands: 'Errands',
-      start: 'Start survey →',
-      skip: 'Skip and go to sign up',
+      orderBtn: 'Place an order',
       login: 'Log in',
+      surveyTitle: 'Help us improve Bringo',
+      surveyMeta: '2 min · Anonymous · Student-led',
+      surveyCta: 'Start survey →',
+      surveyDismiss: 'Maybe later',
       privacy: 'Your answers are anonymous and used only to improve Bringo.',
     },
     de: {
-      badge: 'Kurzes Feedback',
-      leftBadge: 'Service-Umfrage',
-      leftTitle1: 'Helfen Sie uns,',
-      leftTitle2: 'lokale Lieferungen',
-      leftTitle3: 'besser zu gestalten.',
       leftDesc:
         'Bringo unterstützt Menschen bei Einkäufen, Apothekengängen, Restaurantbestellungen und alltäglichen Besorgungen – lokal, schnell und unkompliziert.',
-      time: '2 Minuten',
-      anonymous: 'Anonym',
-      studentLed: 'Von Studierenden',
       welcome: 'Willkommen bei',
-      desc:
-        'Bringo verbindet Menschen, die Hilfe bei lokalen Besorgungen brauchen, mit verifizierten studentischen Kurieren in der Nähe.\n\nBevor Sie sich anmelden, möchten wir ein paar kurze Fragen stellen, damit wir den Service verbessern können.',
       groceries: 'Einkäufe',
       pharmacy: 'Lieferungen',
       errands: 'Besorgungen',
-      start: 'Umfrage starten →',
-      skip: 'Überspringen und direkt zur Bestellung',
+      orderBtn: 'Bestellung aufgeben',
       login: 'Anmelden',
+      surveyTitle: 'Helfen Sie uns, Bringo zu verbessern',
+      surveyMeta: '2 Min · Anonym · Von Studierenden',
+      surveyCta: 'Umfrage starten →',
+      surveyDismiss: 'Vielleicht später',
       privacy: 'Ihre Antworten sind anonym und werden nur zur Verbesserung von Bringo genutzt.',
     },
   }
@@ -254,41 +247,28 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
           }}
         />
 
-        <div className="relative z-10 space-y-6">
-
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white leading-tight">
-            {intro.leftTitle1}
-            <br />
-            {intro.leftTitle2}
-            <br />
-            <span className="text-green-300">{intro.leftTitle3}</span>
+        <div className="relative z-10">
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black leading-tight max-w-md" style={{ color: 'rgba(255,255,255,0.82)' }}>
+            {surveyLang === 'de' ? (
+              <>
+                Bringo unterstützt Menschen bei{' '}
+                <span style={{ color: '#a7f3d0' }}>Einkäufen</span>,{' '}
+                <span style={{ color: '#a7f3d0' }}>Apothekengängen</span>,{' '}
+                <span style={{ color: '#a7f3d0' }}>Restaurantbestellungen</span>{' '}
+                und alltäglichen Besorgungen –{' '}
+                <span className="text-green-300">lokal, schnell und unkompliziert.</span>
+              </>
+            ) : (
+              <>
+                Bringo supports people with{' '}
+                <span style={{ color: '#a7f3d0' }}>groceries</span>,{' '}
+                <span style={{ color: '#a7f3d0' }}>pharmacy visits</span>,{' '}
+                <span style={{ color: '#a7f3d0' }}>restaurant orders</span>,{' '}
+                and everyday errands –{' '}
+                <span className="text-green-300">local, fast, and straightforward.</span>
+              </>
+            )}
           </h1>
-
-          <p className="text-white/60 leading-relaxed max-w-md">{intro.leftDesc}</p>
-
-          <div className="flex items-center gap-5">
-            <div className="flex items-center gap-2">
-              <svg className="w-4 h-4 text-white/50 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
-                <circle cx="12" cy="12" r="9" />
-                <path strokeLinecap="round" d="M12 7v5l3 2" />
-              </svg>
-              <span className="text-sm text-white/70">{intro.time}</span>
-            </div>
-            <span className="w-px h-4 bg-white/20" />
-            <div className="flex items-center gap-2">
-              <svg className="w-4 h-4 text-white/50 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0zM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-              </svg>
-              <span className="text-sm text-white/70">{intro.anonymous}</span>
-            </div>
-            <span className="w-px h-4 bg-white/20" />
-            <div className="flex items-center gap-2">
-              <svg className="w-4 h-4 text-white/50 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 3.741-3.342M6.75 15a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5zm0 0v-3.675A55.378 55.378 0 0 1 12 8.443m-7.007 11.55A5.981 5.981 0 0 0 6.75 15.75v-1.5" />
-              </svg>
-              <span className="text-sm text-white/70">{intro.studentLed}</span>
-            </div>
-          </div>
         </div>
 
         <div className="absolute bottom-10 left-10 lg:left-14 z-10 flex flex-col gap-2">
@@ -365,12 +345,11 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
               <motion.div
                 variants={{ hidden: { opacity: 0, y: 24 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' } } }}
               >
-                <h1 className="font-black text-gray-900 text-3xl sm:text-4xl md:text-5xl lg:text-6xl leading-none mb-3 md:mb-5">
+                <h1 className="font-black text-gray-900 text-3xl sm:text-4xl md:text-5xl lg:text-6xl leading-none">
                   {intro.welcome}
                   <br />
-                  <span className="shimmer-text">Bringo.</span>
+                  <span className="shimmer-text">Bringo</span>
                 </h1>
-                <p className="text-gray-500 text-base md:text-xl leading-relaxed whitespace-pre-line">{intro.desc}</p>
               </motion.div>
 
               <motion.div
@@ -405,21 +384,14 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
                 className="space-y-3"
               >
                 <button
-                  onClick={() => setStep(2)}
-                  className="w-full py-3.5 md:py-4 rounded-xl font-semibold text-white text-sm md:text-base"
+                  onClick={() => setStep(5)}
+                  className="w-full py-4 rounded-xl font-semibold text-white text-sm md:text-base"
                   style={{
                     background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
                     boxShadow: '0 4px 16px rgba(22,163,74,0.35)',
                   }}
                 >
-                  {intro.start}
-                </button>
-
-                <button
-                  onClick={() => setStep(5)}
-                  className="w-full py-3.5 rounded-xl font-semibold text-sm border-2 border-green-600 text-green-700 hover:bg-green-50 transition-colors"
-                >
-                  {intro.skip}
+                  {intro.orderBtn}
                 </button>
 
                 <div className="pt-2 text-center">
@@ -432,6 +404,58 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
                 </div>
               </motion.div>
             </motion.div>
+          )}
+
+          {/* Survey popup — slides in from top-right after 3 seconds */}
+          {step === 0 && showSurveyBanner && (
+            <div
+              className="fixed top-5 right-5 z-50"
+              style={{ animation: 'slideInRight 0.45s cubic-bezier(0.34,1.26,0.64,1) forwards' }}
+            >
+              <div
+                className="w-72 sm:w-80 rounded-2xl overflow-hidden"
+                style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.22)', background: 'white' }}
+              >
+                <div
+                  className="px-5 pt-5 pb-2"
+                  style={{ background: 'linear-gradient(135deg,#0d3d1e,#166534)' }}
+                >
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center shrink-0 text-xl">📋</div>
+                      <div>
+                        <p className="font-black text-white text-base leading-tight">{intro.surveyTitle}</p>
+                        <p className="text-white/60 text-xs mt-0.5">{intro.surveyMeta}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setShowSurveyBanner(false)}
+                      className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 transition-colors flex items-center justify-center shrink-0 mt-0.5"
+                      aria-label="Dismiss"
+                    >
+                      <svg className="w-3.5 h-3.5 text-white/70" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+                <div className="px-5 py-4 flex items-center gap-3">
+                  <button
+                    onClick={() => { setShowSurveyBanner(false); setStep(2) }}
+                    className="flex-1 py-3 px-5 rounded-xl font-semibold text-sm text-white"
+                    style={{ background: 'linear-gradient(135deg,#16a34a,#15803d)', boxShadow: '0 4px 14px rgba(22,163,74,0.35)' }}
+                  >
+                    {intro.surveyCta}
+                  </button>
+                  <button
+                    onClick={() => setShowSurveyBanner(false)}
+                    className="px-4 py-3 rounded-xl font-medium text-sm text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    {intro.surveyDismiss}
+                  </button>
+                </div>
+              </div>
+            </div>
           )}
 
           {step === 2 && (

@@ -7,7 +7,6 @@ import ComingSoonSheet from '../components/ComingSoonSheet'
 import { calculatePrice } from '../lib/pricing'
 import DeliveryMap, { type Coords } from '../components/DeliveryMap'
 
-// Preset addresses with approximate Pfarrkirchen coords
 const PICKUP_PRESETS = [
   { label: 'CAMPUS Pfarrkirchen, Petersbogen 1', lat: 48.4352, lon: 12.9512 },
   { label: 'Bahnhof Pfarrkirchen, Bahnhofstr. 1', lat: 48.4381, lon: 12.9438 },
@@ -41,17 +40,14 @@ const tr = {
     sMediumTitle: 'Mittel', sMediumSub: 'Bücher, Tragetasche',
     sLargeTitle: 'Groß', sLargeSub: 'Karton, mehrere Teile',
     stepOf: (n: number) => `Schritt ${n} von 5`,
-    continue: 'Weiter',
-    back: 'Zurück',
+    continue: 'Weiter', back: 'Zurück',
     pickup: 'Abholung', dropoff: 'Zielort',
-    size: 'Größe', price: 'Preis', estimated: 'Schätzung',
     smallLabel: 'Klein', mediumLabel: 'Mittel', largeLabel: 'Groß',
     nowTitle: 'Jetzt', nowSub: 'Kurier wird sofort gesucht',
     laterTitle: 'Später', laterSub: 'Lieferung für später einplanen',
     dateLabel: 'Datum', timeLabel: 'Uhrzeit',
     when: 'Wann', asap: 'Sofort',
     priceBase: 'Grundpreis', priceDist: 'Entfernung', pricePeak: 'Stoßzeit', priceTotal: 'Gesamt',
-    searching: 'Suche…',
   },
   en: {
     s1Title: 'Pickup', s1Sub: 'Where should your item be picked up from?',
@@ -69,17 +65,14 @@ const tr = {
     sMediumTitle: 'Medium', sMediumSub: 'Books, bag',
     sLargeTitle: 'Large', sLargeSub: 'Box, multiple items',
     stepOf: (n: number) => `Step ${n} of 5`,
-    continue: 'Continue',
-    back: 'Back',
+    continue: 'Continue', back: 'Back',
     pickup: 'Pickup', dropoff: 'Dropoff',
-    size: 'Size', price: 'Price', estimated: 'Estimated',
     smallLabel: 'Small', mediumLabel: 'Medium', largeLabel: 'Large',
     nowTitle: 'Now', nowSub: 'Courier found immediately',
     laterTitle: 'Later', laterSub: 'Schedule delivery for later',
     dateLabel: 'Date', timeLabel: 'Time',
     when: 'When', asap: 'ASAP',
     priceBase: 'Base price', priceDist: 'Distance', pricePeak: 'Peak hour', priceTotal: 'Total',
-    searching: 'Searching…',
   },
 }
 
@@ -94,18 +87,137 @@ interface NomResult {
   display_name: string
   lat: string
   lon: string
-  address?: { road?: string; house_number?: string; city?: string; town?: string; village?: string; postcode?: string }
+  // Photon feature properties
+  _photon?: {
+    name?: string
+    street?: string
+    housenumber?: string
+    city?: string
+    postcode?: string
+    country?: string
+  }
 }
 
 function formatNom(r: NomResult): string {
-  const a = r.address
-  if (!a) return r.display_name.split(',').slice(0, 3).join(',')
-  const parts = [
-    a.road && a.house_number ? `${a.road} ${a.house_number}` : a.road,
-    a.city ?? a.town ?? a.village,
-    a.postcode,
-  ].filter(Boolean)
-  return parts.length ? parts.join(', ') : r.display_name.split(',').slice(0, 2).join(',')
+  const p = r._photon
+  if (p) {
+    const street = p.street && p.housenumber ? `${p.street} ${p.housenumber}` : (p.street ?? p.name ?? '')
+    const parts = [street, p.city, p.postcode].filter(Boolean)
+    return parts.length ? parts.join(', ') : r.display_name
+  }
+  return r.display_name
+}
+
+const PHOTON_GENERAL_TYPES = new Set(['city', 'district', 'county', 'state', 'country'])
+
+function photonToNomResult(f: { geometry: { coordinates: [number, number] }; properties: Record<string, string> }): NomResult | null {
+  const p = f.properties
+  if (PHOTON_GENERAL_TYPES.has(p.type)) return null
+  const [lon, lat] = f.geometry.coordinates
+  const street = p.street && p.housenumber ? `${p.street} ${p.housenumber}` : (p.street ?? p.name ?? '')
+  const display = [street, p.city, p.postcode].filter(Boolean).join(', ')
+  return {
+    place_id: Math.random() * 1e9,
+    display_name: display || p.name || '',
+    lat: String(lat),
+    lon: String(lon),
+    _photon: { name: p.name, street: p.street, housenumber: p.housenumber, city: p.city, postcode: p.postcode },
+  }
+}
+
+// Defined OUTSIDE CreateDeliveryPage to prevent remount-on-every-render focus loss
+interface AddressFieldProps {
+  id: string
+  value: string
+  onChange: (v: string) => void
+  onFocus: () => void
+  onBlur: () => void
+  placeholder: string
+  label: string
+  suggestions: NomResult[]
+  onSelect: (label: string, coords: Coords) => void
+  presets: typeof PICKUP_PRESETS
+  coordsSet: boolean
+  orChoose: string
+}
+
+function AddressField({
+  id, value, onChange, onFocus, onBlur, placeholder, label,
+  suggestions, onSelect, presets, coordsSet, orChoose,
+}: AddressFieldProps) {
+  return (
+    <div>
+      <label className="block text-sm font-semibold text-gray-700 mb-2" htmlFor={id}>{label}</label>
+      <div className="relative">
+        <div className="relative">
+          <input
+            id={id}
+            type="text"
+            value={value}
+            autoComplete="off"
+            onChange={e => onChange(e.target.value)}
+            onFocus={onFocus}
+            onBlur={() => setTimeout(onBlur, 160)}
+            placeholder={placeholder}
+            className="w-full pl-10 pr-4 py-3.5 rounded-xl border-2 outline-none text-gray-900 placeholder-gray-300 text-base font-medium bg-white transition-colors"
+            style={{ borderColor: value.length > 0 ? (coordsSet ? '#16a34a' : '#f59e0b') : '#e5e7eb' }}
+          />
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+          </svg>
+          {coordsSet && (
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-green-100 flex items-center justify-center pointer-events-none">
+              <svg className="w-3 h-3 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+          )}
+        </div>
+
+        {suggestions.length > 0 && (
+          <div className="absolute z-[2000] left-0 right-0 top-full mt-1 bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden">
+            {suggestions.map(r => (
+              <button
+                key={r.place_id}
+                onMouseDown={() => onSelect(formatNom(r), { lat: parseFloat(r.lat), lon: parseFloat(r.lon) })}
+                className="w-full text-left px-4 py-3 text-sm hover:bg-green-50 transition-colors flex items-start gap-3 border-b border-gray-50 last:border-0"
+              >
+                <svg className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+                </svg>
+                <span className="text-gray-700 leading-tight">{formatNom(r)}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <p className="text-xs text-gray-400 mt-3 mb-2">{orChoose}</p>
+      <div className="space-y-1.5">
+        {presets.map(p => (
+          <button
+            key={p.label}
+            onClick={() => onSelect(p.label, { lat: p.lat, lon: p.lon })}
+            className="w-full text-left px-3.5 py-2.5 rounded-xl border-2 text-sm font-medium transition-all flex items-center gap-2.5"
+            style={{
+              borderColor: value === p.label ? '#16a34a' : '#f3f4f6',
+              background: value === p.label ? '#f0fdf4' : '#f9fafb',
+              color: value === p.label ? '#15803d' : '#374151',
+            }}
+          >
+            <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+              style={{ color: value === p.label ? '#16a34a' : '#9ca3af' }}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+            </svg>
+            {p.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
 }
 
 export default function CreateDeliveryPage() {
@@ -127,8 +239,6 @@ export default function CreateDeliveryPage() {
   const [scheduleType, setScheduleType] = useState<'now' | 'later'>('now')
   const [scheduleDate, setScheduleDate] = useState('')
   const [scheduleTime, setScheduleTime] = useState('')
-
-  // Nominatim autocomplete
   const [pickupSugs, setPickupSugs] = useState<NomResult[]>([])
   const [dropoffSugs, setDropoffSugs] = useState<NomResult[]>([])
   const [pickupFocused, setPickupFocused] = useState(false)
@@ -138,52 +248,46 @@ export default function CreateDeliveryPage() {
 
   useEffect(() => {
     if (pickupTimer.current) clearTimeout(pickupTimer.current)
-    if (pickup.length < 3 || pickupCoords) { setPickupSugs([]); return }
+    if (pickup.length < 2 || pickupCoords) { setPickupSugs([]); return }
     pickupTimer.current = setTimeout(async () => {
       try {
         const r = await fetch(
-          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(pickup)}&format=json&limit=5&countrycodes=de&addressdetails=1`,
-          { headers: { 'Accept-Language': lang } }
+          `https://photon.komoot.io/api/?q=${encodeURIComponent(pickup)}&limit=6&bbox=12.6,48.2,13.2,48.6&lang=${lang}`,
         )
-        setPickupSugs(await r.json())
+        const data = await r.json()
+        setPickupSugs((data.features ?? []).map(photonToNomResult).filter((x: NomResult | null): x is NomResult => x !== null))
       } catch { setPickupSugs([]) }
-    }, 380)
+    }, 300)
   }, [pickup])
 
   useEffect(() => {
     if (dropoffTimer.current) clearTimeout(dropoffTimer.current)
-    if (dropoff.length < 3 || dropoffCoords) { setDropoffSugs([]); return }
+    if (dropoff.length < 2 || dropoffCoords) { setDropoffSugs([]); return }
     dropoffTimer.current = setTimeout(async () => {
       try {
         const r = await fetch(
-          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(dropoff)}&format=json&limit=5&countrycodes=de&addressdetails=1`,
-          { headers: { 'Accept-Language': lang } }
+          `https://photon.komoot.io/api/?q=${encodeURIComponent(dropoff)}&limit=6&bbox=12.6,48.2,13.2,48.6&lang=${lang}`,
         )
-        setDropoffSugs(await r.json())
+        const data = await r.json()
+        setDropoffSugs((data.features ?? []).map(photonToNomResult))
       } catch { setDropoffSugs([]) }
-    }, 380)
+    }, 300)
   }, [dropoff])
 
   const selectPickup = (label: string, coords: Coords) => {
-    setPickup(label)
-    setPickupCoords(coords)
-    setPickupSugs([])
+    setPickup(label); setPickupCoords(coords); setPickupSugs([])
   }
-
   const selectDropoff = (label: string, coords: Coords) => {
-    setDropoff(label)
-    setDropoffCoords(coords)
-    setDropoffSugs([])
+    setDropoff(label); setDropoffCoords(coords); setDropoffSugs([])
   }
-
   const handleMapClick = (lat: number, lon: number, address: string) => {
     if (step === 1) selectPickup(address, { lat, lon })
     else if (step === 2) selectDropoff(address, { lat, lon })
   }
 
   const canContinue =
-    step === 1 ? pickup.trim().length >= 5
-    : step === 2 ? dropoff.trim().length >= 5
+    step === 1 ? !!pickupCoords
+    : step === 2 ? !!dropoffCoords
     : step === 4 ? scheduleType === 'now' || (scheduleDate !== '' && scheduleTime !== '')
     : true
 
@@ -194,105 +298,12 @@ export default function CreateDeliveryPage() {
     return <ComingSoonSheet onBack={() => setStep(5)} showFeedback feedbackPage="create-delivery" />
   }
 
-  // Shared step progress bar
   const stepBar = (
     <div className="flex gap-1.5 mb-6" role="progressbar" aria-valuenow={step} aria-valuemin={1} aria-valuemax={5}>
       {[0,1,2,3,4].map(i => (
         <div key={i} className="flex-1 h-1.5 rounded-full transition-all duration-500"
           style={{ background: i < step ? '#16a34a' : '#e5e7eb' }} />
       ))}
-    </div>
-  )
-
-  // Shared address input with autocomplete dropdown
-  const AddressField = ({
-    id, value, onChange, onFocus, onBlur, placeholder, label,
-    suggestions, onSelect, presets, coordsSet,
-  }: {
-    id: string
-    value: string
-    onChange: (v: string) => void
-    onFocus: () => void
-    onBlur: () => void
-    placeholder: string
-    label: string
-    suggestions: NomResult[]
-    onSelect: (label: string, coords: Coords) => void
-    presets: typeof PICKUP_PRESETS
-    coordsSet: boolean
-  }) => (
-    <div>
-      <label className="block text-sm font-semibold text-gray-700 mb-2" htmlFor={id}>{label}</label>
-      <div className="relative">
-        <div className="relative">
-          <input
-            id={id}
-            type="text"
-            value={value}
-            autoComplete="off"
-            onChange={e => { onChange(e.target.value); if (coordsSet) { if (id.startsWith('pickup')) setPickupCoords(null); else setDropoffCoords(null) } }}
-            onFocus={onFocus}
-            onBlur={() => setTimeout(onBlur, 150)}
-            placeholder={placeholder}
-            className="w-full pl-10 pr-4 py-3.5 rounded-xl border-2 outline-none text-gray-900 placeholder-gray-300 text-base font-medium bg-white transition-colors"
-            style={{ borderColor: value.length > 0 ? (coordsSet ? '#16a34a' : '#f59e0b') : '#e5e7eb' }}
-          />
-          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
-          </svg>
-          {coordsSet && (
-            <div className="absolute right-3 top-1/2 -translate-y-1/2">
-              <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
-                <svg className="w-3 h-3 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Nominatim dropdown */}
-        {suggestions.length > 0 && (
-          <div className="absolute z-[2000] left-0 right-0 top-full mt-1 bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden">
-            {suggestions.map(r => (
-              <button
-                key={r.place_id}
-                onMouseDown={() => onSelect(formatNom(r), { lat: parseFloat(r.lat), lon: parseFloat(r.lon) })}
-                className="w-full text-left px-4 py-3 text-sm hover:bg-green-50 transition-colors flex items-start gap-3 border-b border-gray-50 last:border-0"
-              >
-                <svg className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
-                </svg>
-                <span className="text-gray-700 leading-tight">{formatNom(r)}</span>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <p className="text-xs text-gray-400 mt-3 mb-2">{t.orChoose}</p>
-      <div className="space-y-1.5" role="group">
-        {presets.map(p => (
-          <button
-            key={p.label}
-            onClick={() => onSelect(p.label, { lat: p.lat, lon: p.lon })}
-            className="w-full text-left px-3.5 py-2.5 rounded-xl border-2 text-sm font-medium transition-all flex items-center gap-2.5"
-            style={{
-              borderColor: value === p.label ? '#16a34a' : '#f3f4f6',
-              background: value === p.label ? '#f0fdf4' : '#f9fafb',
-              color: value === p.label ? '#15803d' : '#374151',
-            }}
-          >
-            <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} style={{ color: value === p.label ? '#16a34a' : '#9ca3af' }}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
-            </svg>
-            {p.label}
-          </button>
-        ))}
-      </div>
     </div>
   )
 
@@ -318,11 +329,8 @@ export default function CreateDeliveryPage() {
 
   const navbar = (
     <div className="flex items-center gap-3 px-5 pt-5 pb-4 border-b border-gray-100 bg-white z-10 shrink-0">
-      <button
-        onClick={goBack}
-        aria-label={t.back}
-        className="w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors shrink-0"
-      >
+      <button onClick={goBack} aria-label={t.back}
+        className="w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors shrink-0">
         <svg className="w-4 h-4 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
         </svg>
@@ -334,26 +342,24 @@ export default function CreateDeliveryPage() {
     </div>
   )
 
-  // Steps 1 and 2 — map layout
+  // Steps 1 & 2 — split layout with map
   if (step === 1 || step === 2) {
     return (
       <div className="min-h-screen bg-white flex flex-col">
         {navbar}
         <div className="flex-1 flex flex-col lg:flex-row overflow-hidden" style={{ minHeight: 0 }}>
-
-          {/* Left — form */}
           <div className="lg:w-[420px] lg:shrink-0 flex flex-col px-5 pt-6 pb-5 overflow-y-auto lg:border-r lg:border-gray-100">
             {stepBar}
+            <div className="animate-fade-in-up flex-1 flex flex-col">
+              <p className="text-xs font-semibold text-green-600 uppercase tracking-wider mb-1">{t.stepOf(step)}</p>
+              <h1 className="text-2xl font-black text-gray-900 mb-1">{step === 1 ? t.s1Title : t.s2Title}</h1>
+              <p className="text-gray-400 text-sm mb-5">{step === 1 ? t.s1Sub : t.s2Sub}</p>
 
-            {step === 1 && (
-              <div className="animate-fade-in-up flex-1 flex flex-col">
-                <p className="text-xs font-semibold text-green-600 uppercase tracking-wider mb-1">{t.stepOf(1)}</p>
-                <h1 className="text-2xl font-black text-gray-900 mb-1">{t.s1Title}</h1>
-                <p className="text-gray-400 text-sm mb-5">{t.s1Sub}</p>
+              {step === 1 && (
                 <AddressField
                   id="pickup-input"
                   value={pickup}
-                  onChange={v => setPickup(v)}
+                  onChange={v => { setPickup(v); if (pickupCoords) setPickupCoords(null) }}
                   onFocus={() => setPickupFocused(true)}
                   onBlur={() => setPickupFocused(false)}
                   placeholder={t.searchPh}
@@ -362,20 +368,15 @@ export default function CreateDeliveryPage() {
                   onSelect={selectPickup}
                   presets={PICKUP_PRESETS}
                   coordsSet={!!pickupCoords}
+                  orChoose={t.orChoose}
                 />
-                {continueBtn}
-              </div>
-            )}
+              )}
 
-            {step === 2 && (
-              <div className="animate-fade-in-up flex-1 flex flex-col">
-                <p className="text-xs font-semibold text-green-600 uppercase tracking-wider mb-1">{t.stepOf(2)}</p>
-                <h1 className="text-2xl font-black text-gray-900 mb-1">{t.s2Title}</h1>
-                <p className="text-gray-400 text-sm mb-5">{t.s2Sub}</p>
+              {step === 2 && (
                 <AddressField
                   id="dropoff-input"
                   value={dropoff}
-                  onChange={v => setDropoff(v)}
+                  onChange={v => { setDropoff(v); if (dropoffCoords) setDropoffCoords(null) }}
                   onFocus={() => setDropoffFocused(true)}
                   onBlur={() => setDropoffFocused(false)}
                   placeholder={t.searchPh}
@@ -384,13 +385,14 @@ export default function CreateDeliveryPage() {
                   onSelect={selectDropoff}
                   presets={DROPOFF_PRESETS}
                   coordsSet={!!dropoffCoords}
+                  orChoose={t.orChoose}
                 />
-                {continueBtn}
-              </div>
-            )}
+              )}
+
+              {continueBtn}
+            </div>
           </div>
 
-          {/* Right — map (stacks below on mobile, full height on desktop) */}
           <div className="flex-1 relative" style={{ minHeight: '45vh' }}>
             <DeliveryMap
               pickupCoords={pickupCoords}
@@ -423,17 +425,17 @@ export default function CreateDeliveryPage() {
             <div className="grid grid-cols-3 gap-2 mb-5">
               {(['S', 'M', 'L'] as const).map(s => {
                 const selected = size === s
-                const title = s === 'S' ? t.sSmallTitle : s === 'M' ? t.sMediumTitle : t.sLargeTitle
-                const sub = s === 'S' ? t.sSmallSub : s === 'M' ? t.sMediumSub : t.sLargeSub
-                const emoji = s === 'S' ? '📄' : s === 'M' ? '📦' : '🗃️'
                 return (
                   <button key={s} onClick={() => setSize(s)}
                     className="p-4 rounded-xl border-2 text-left transition-all"
-                    style={{ borderColor: selected ? '#16a34a' : '#e5e7eb', background: selected ? '#f0fdf4' : 'white' }}
-                  >
-                    <p className="text-2xl mb-1">{emoji}</p>
-                    <p className="text-sm font-bold" style={{ color: selected ? '#15803d' : '#111827' }}>{title}</p>
-                    <p className="text-xs text-gray-400 mt-0.5 leading-tight">{sub}</p>
+                    style={{ borderColor: selected ? '#16a34a' : '#e5e7eb', background: selected ? '#f0fdf4' : 'white' }}>
+                    <p className="text-2xl mb-1">{s === 'S' ? '📄' : s === 'M' ? '📦' : '🗃️'}</p>
+                    <p className="text-sm font-bold" style={{ color: selected ? '#15803d' : '#111827' }}>
+                      {s === 'S' ? t.sSmallTitle : s === 'M' ? t.sMediumTitle : t.sLargeTitle}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-0.5 leading-tight">
+                      {s === 'S' ? t.sSmallSub : s === 'M' ? t.sMediumSub : t.sLargeSub}
+                    </p>
                   </button>
                 )
               })}
@@ -441,11 +443,9 @@ export default function CreateDeliveryPage() {
             <label className="block text-sm font-semibold text-gray-700 mb-1" htmlFor="courier-note">
               {t.noteLabel} <span className="font-normal text-gray-400">({t.optional})</span>
             </label>
-            <textarea
-              id="courier-note" value={note} onChange={e => setNote(e.target.value)}
+            <textarea id="courier-note" value={note} onChange={e => setNote(e.target.value)}
               placeholder={t.notePh} rows={2}
-              className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-green-600 outline-none text-gray-900 placeholder-gray-300 text-sm font-medium bg-white transition-colors resize-none"
-            />
+              className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-green-600 outline-none text-gray-900 placeholder-gray-300 text-sm font-medium bg-white transition-colors resize-none" />
           </div>
         )}
 
@@ -460,8 +460,7 @@ export default function CreateDeliveryPage() {
                 return (
                   <button key={type} onClick={() => setScheduleType(type)}
                     className="p-5 rounded-2xl border-2 text-left transition-all"
-                    style={{ borderColor: selected ? '#16a34a' : '#e5e7eb', background: selected ? '#f0fdf4' : 'white' }}
-                  >
+                    style={{ borderColor: selected ? '#16a34a' : '#e5e7eb', background: selected ? '#f0fdf4' : 'white' }}>
                     <p className="text-2xl mb-2">{type === 'now' ? '⚡' : '📅'}</p>
                     <p className="text-sm font-bold" style={{ color: selected ? '#15803d' : '#111827' }}>
                       {type === 'now' ? t.nowTitle : t.laterTitle}
@@ -486,8 +485,7 @@ export default function CreateDeliveryPage() {
                       return (
                         <button key={iso} onClick={() => setScheduleDate(iso)}
                           className="flex flex-col items-center shrink-0 w-12 py-2.5 rounded-xl border-2 transition-all"
-                          style={{ borderColor: selected ? '#16a34a' : '#e5e7eb', background: selected ? '#f0fdf4' : 'white', color: selected ? '#15803d' : '#374151' }}
-                        >
+                          style={{ borderColor: selected ? '#16a34a' : '#e5e7eb', background: selected ? '#f0fdf4' : 'white', color: selected ? '#15803d' : '#374151' }}>
                           <span className="text-xs font-semibold">{dayName}</span>
                           <span className="text-base font-black">{d.getDate()}</span>
                         </button>
@@ -501,8 +499,7 @@ export default function CreateDeliveryPage() {
                     {TIME_SLOTS.map(slot => (
                       <button key={slot} onClick={() => setScheduleTime(slot)}
                         className="py-2.5 rounded-xl text-sm font-semibold border-2 transition-all"
-                        style={{ borderColor: scheduleTime === slot ? '#16a34a' : '#e5e7eb', background: scheduleTime === slot ? '#f0fdf4' : 'white', color: scheduleTime === slot ? '#15803d' : '#374151' }}
-                      >
+                        style={{ borderColor: scheduleTime === slot ? '#16a34a' : '#e5e7eb', background: scheduleTime === slot ? '#f0fdf4' : 'white', color: scheduleTime === slot ? '#15803d' : '#374151' }}>
                         {slot}
                       </button>
                     ))}
@@ -544,7 +541,6 @@ export default function CreateDeliveryPage() {
                 </span>
               </div>
             </div>
-
             {(() => {
               const p = calculatePrice(pickup, dropoff, size, scheduleType, scheduleTime)
               return (
