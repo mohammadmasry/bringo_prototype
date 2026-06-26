@@ -638,7 +638,7 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
                 </div>
                 <div className="flex-1">
                   <p className="font-black text-gray-900 text-lg leading-tight group-hover:text-green-700 transition-colors">
-                    {surveyLang === 'de' ? 'nur liefern' : 'Delivery'}
+                    {surveyLang === 'de' ? 'Nur Liefern' : 'Delivery'}
                   </p>
                   <p className="text-gray-400 text-sm mt-0.5">
                     {surveyLang === 'de'
