@@ -251,17 +251,7 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
           }}
         />
 
-        <div className="relative z-10 flex items-center gap-2.5">
-          <div
-            className="w-9 h-9 rounded-xl flex items-center justify-center border border-white/20"
-            style={{ background: 'rgba(255,255,255,0.12)' }}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="white" aria-hidden="true">
-              <path d="M12 2C8.686 2 6 4.686 6 8c0 1.77.734 3.37 1.91 4.51L5 22h14l-2.91-9.49A5.99 5.99 0 0 0 18 8c0-3.314-2.686-6-6-6zm0 2a4 4 0 1 1 0 8 4 4 0 0 1 0-8z" />
-            </svg>
-          </div>
-          <span className="text-xl font-bold text-white tracking-tight">bringo</span>
-        </div>
+        <div className="relative z-10" />
 
         <div className="relative z-10 space-y-6">
           <div className="inline-flex bg-white/10 border border-white/10 rounded-full px-4 py-2 text-green-200 text-xs font-semibold uppercase tracking-wide">
@@ -278,18 +268,27 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
 
           <p className="text-white/60 leading-relaxed max-w-md">{intro.leftDesc}</p>
 
-          <div className="grid grid-cols-3 gap-3">
-            <div className="rounded-2xl bg-white/10 border border-white/10 p-4 text-center text-white">
-              <div className="text-2xl mb-1">⏱️</div>
-              <p className="text-xs text-white/70">{intro.time}</p>
+          <div className="flex items-center gap-5">
+            <div className="flex items-center gap-2">
+              <svg className="w-4 h-4 text-white/50 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
+                <circle cx="12" cy="12" r="9" />
+                <path strokeLinecap="round" d="M12 7v5l3 2" />
+              </svg>
+              <span className="text-sm text-white/70">{intro.time}</span>
             </div>
-            <div className="rounded-2xl bg-white/10 border border-white/10 p-4 text-center text-white">
-              <div className="text-2xl mb-1">🔒</div>
-              <p className="text-xs text-white/70">{intro.anonymous}</p>
+            <span className="w-px h-4 bg-white/20" />
+            <div className="flex items-center gap-2">
+              <svg className="w-4 h-4 text-white/50 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0zM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+              </svg>
+              <span className="text-sm text-white/70">{intro.anonymous}</span>
             </div>
-            <div className="rounded-2xl bg-white/10 border border-white/10 p-4 text-center text-white">
-              <div className="text-2xl mb-1">🎓</div>
-              <p className="text-xs text-white/70">{intro.studentLed}</p>
+            <span className="w-px h-4 bg-white/20" />
+            <div className="flex items-center gap-2">
+              <svg className="w-4 h-4 text-white/50 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 3.741-3.342M6.75 15a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5zm0 0v-3.675A55.378 55.378 0 0 1 12 8.443m-7.007 11.55A5.981 5.981 0 0 0 6.75 15.75v-1.5" />
+              </svg>
+              <span className="text-sm text-white/70">{intro.studentLed}</span>
             </div>
           </div>
         </div>
@@ -356,13 +355,6 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
 
           {step === 0 && (
             <div className="space-y-8">
-              <div className="inline-flex items-center gap-2 bg-green-50 border border-green-100 rounded-full px-3 py-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-500" aria-hidden="true" />
-                <span className="text-xs font-semibold text-green-700 tracking-wide uppercase">
-                  {intro.badge}
-                </span>
-              </div>
-
               <div>
                 <h1 className="font-black text-gray-900 text-5xl lg:text-6xl leading-none mb-5">
                   {intro.welcome}
