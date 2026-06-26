@@ -400,7 +400,7 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
 
               <button
                 onClick={() => setStep(5)}
-                className="w-full text-gray-400 text-sm font-medium hover:text-gray-600 transition-colors"
+                className="w-full py-3.5 rounded-xl font-semibold text-sm border-2 border-green-600 text-green-700 hover:bg-green-50 transition-colors"
               >
                 {intro.skip}
               </button>
