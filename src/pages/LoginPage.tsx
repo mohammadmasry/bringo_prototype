@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { clearSession } from '../lib/session'
 import { api } from '../lib/api'
@@ -168,7 +169,7 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
       leftTitle2: 'local deliveries',
       leftTitle3: 'for real users.',
       leftDesc:
-        'Your answers help us understand how Bringo should support people with groceries, pharmacy visits, restaurant orders, and everyday errands.',
+        'Bringo supports people with groceries, pharmacy visits, restaurant orders, and everyday errands – local, fast, and straightforward.',
       time: '2 minutes',
       anonymous: 'Anonymous',
       studentLed: 'Student-led',
@@ -190,7 +191,7 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
       leftTitle2: 'lokale Lieferungen',
       leftTitle3: 'besser zu gestalten.',
       leftDesc:
-        'Ihre Antworten helfen uns zu verstehen, wie Bringo Menschen bei Einkäufen, Apothekengängen, Restaurantbestellungen und alltäglichen Besorgungen unterstützen kann.',
+        'Bringo unterstützt Menschen bei Einkäufen, Apothekengängen, Restaurantbestellungen und alltäglichen Besorgungen – lokal, schnell und unkompliziert.',
       time: '2 Minuten',
       anonymous: 'Anonym',
       studentLed: 'Von Studierenden',
@@ -242,26 +243,16 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
         background: 'linear-gradient(150deg, #0d3d1e 0%, #14532d 35%, #166534 70%, #16a34a 100%)',
       }}
     >
-      <div className="hidden md:flex md:w-[45%] relative flex-col justify-between p-10 lg:p-14 overflow-hidden">
-        <div
+      <div className="hidden md:flex md:w-[45%] relative flex-col justify-center p-10 lg:p-14 overflow-hidden">
+        <motion.div
           className="absolute inset-0 pointer-events-none"
+          animate={{ opacity: [0.3, 1, 0.3] }}
+          transition={{ duration: 5, ease: 'easeInOut', repeat: Infinity }}
           style={{
-            backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.08) 1px, transparent 1px)',
+            backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.18) 1.5px, transparent 1.5px)',
             backgroundSize: '28px 28px',
           }}
         />
-
-        <div className="relative z-10 flex items-center gap-2.5">
-          <div
-            className="w-9 h-9 rounded-xl flex items-center justify-center border border-white/20"
-            style={{ background: 'rgba(255,255,255,0.12)' }}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="white" aria-hidden="true">
-              <path d="M12 2C8.686 2 6 4.686 6 8c0 1.77.734 3.37 1.91 4.51L5 22h14l-2.91-9.49A5.99 5.99 0 0 0 18 8c0-3.314-2.686-6-6-6zm0 2a4 4 0 1 1 0 8 4 4 0 0 1 0-8z" />
-            </svg>
-          </div>
-          <span className="text-xl font-bold text-white tracking-tight">bringo</span>
-        </div>
 
         <div className="relative z-10 space-y-6">
           <div className="inline-flex bg-white/10 border border-white/10 rounded-full px-4 py-2 text-green-200 text-xs font-semibold uppercase tracking-wide">
@@ -278,38 +269,51 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
 
           <p className="text-white/60 leading-relaxed max-w-md">{intro.leftDesc}</p>
 
-          <div className="grid grid-cols-3 gap-3">
-            <div className="rounded-2xl bg-white/10 border border-white/10 p-4 text-center text-white">
-              <div className="text-2xl mb-1">⏱️</div>
-              <p className="text-xs text-white/70">{intro.time}</p>
+          <div className="flex items-center gap-5">
+            <div className="flex items-center gap-2">
+              <svg className="w-4 h-4 text-white/50 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
+                <circle cx="12" cy="12" r="9" />
+                <path strokeLinecap="round" d="M12 7v5l3 2" />
+              </svg>
+              <span className="text-sm text-white/70">{intro.time}</span>
             </div>
-            <div className="rounded-2xl bg-white/10 border border-white/10 p-4 text-center text-white">
-              <div className="text-2xl mb-1">🔒</div>
-              <p className="text-xs text-white/70">{intro.anonymous}</p>
+            <span className="w-px h-4 bg-white/20" />
+            <div className="flex items-center gap-2">
+              <svg className="w-4 h-4 text-white/50 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0zM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+              </svg>
+              <span className="text-sm text-white/70">{intro.anonymous}</span>
             </div>
-            <div className="rounded-2xl bg-white/10 border border-white/10 p-4 text-center text-white">
-              <div className="text-2xl mb-1">🎓</div>
-              <p className="text-xs text-white/70">{intro.studentLed}</p>
+            <span className="w-px h-4 bg-white/20" />
+            <div className="flex items-center gap-2">
+              <svg className="w-4 h-4 text-white/50 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 3.741-3.342M6.75 15a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5zm0 0v-3.675A55.378 55.378 0 0 1 12 8.443m-7.007 11.55A5.981 5.981 0 0 0 6.75 15.75v-1.5" />
+              </svg>
+              <span className="text-sm text-white/70">{intro.studentLed}</span>
             </div>
           </div>
         </div>
 
-        <div className="relative z-10 flex flex-col gap-2">
+        <div className="absolute bottom-10 left-10 lg:left-14 z-10 flex flex-col gap-2">
           <button
             onClick={() => (window.location.href = '/partner')}
-            className="flex items-center gap-2 text-white/50 hover:text-white transition-colors text-sm group w-fit"
+            className="flex items-center gap-2 text-white/50 hover:text-white transition-colors group w-fit"
           >
-            <span>🏪</span>
-            <span className="font-medium group-hover:underline underline-offset-2">
+            <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 21v-7.5a.75.75 0 0 1 .75-.75h3a.75.75 0 0 1 .75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349M3.75 21V9.349m0 0a3.001 3.001 0 0 0 3.75-.615A2.993 2.993 0 0 0 9.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 0 0 2.25 1.016 2.993 2.993 0 0 0 2.25-1.016 3.001 3.001 0 0 0 3.75.614m-16.5 0a3.004 3.004 0 0 1-.621-4.72l1.189-1.19A1.5 1.5 0 0 1 5.378 3h13.243a1.5 1.5 0 0 1 1.06.44l1.19 1.189a3 3 0 0 1-.621 4.72M6.75 18h3.75a.75.75 0 0 0 .75-.75V13.5a.75.75 0 0 0-.75-.75H6.75a.75.75 0 0 0-.75.75v3.75c0 .414.336.75.75.75z" />
+            </svg>
+            <span className="text-base font-medium group-hover:underline underline-offset-2">
               {surveyLang === 'de' ? 'Für Geschäftspartner' : 'For business partners'}
             </span>
           </button>
           <button
             onClick={() => (window.location.href = '/courier-login')}
-            className="flex items-center gap-2 text-white/50 hover:text-white transition-colors text-sm group w-fit"
+            className="flex items-center gap-2 text-white/50 hover:text-white transition-colors group w-fit"
           >
-            <span>🚴</span>
-            <span className="font-medium group-hover:underline underline-offset-2">
+            <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0zM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+            </svg>
+            <span className="text-base font-medium group-hover:underline underline-offset-2">
               {surveyLang === 'de' ? 'Als Kurier arbeiten' : 'Work as a courier'}
             </span>
           </button>
@@ -355,65 +359,82 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
           </div>
 
           {step === 0 && (
-            <div className="space-y-8">
-              <div className="inline-flex items-center gap-2 bg-green-50 border border-green-100 rounded-full px-3 py-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-500" aria-hidden="true" />
-                <span className="text-xs font-semibold text-green-700 tracking-wide uppercase">
-                  {intro.badge}
-                </span>
-              </div>
-
-              <div>
+            <motion.div
+              className="space-y-8"
+              initial="hidden"
+              animate="visible"
+              variants={{ visible: { transition: { staggerChildren: 0.12 } } }}
+            >
+              <motion.div
+                variants={{ hidden: { opacity: 0, y: 24 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' } } }}
+              >
                 <h1 className="font-black text-gray-900 text-5xl lg:text-6xl leading-none mb-5">
                   {intro.welcome}
                   <br />
-                  <span className="gradient-text">Bringo.</span>
+                  <span className="shimmer-text">Bringo.</span>
                 </h1>
                 <p className="text-gray-500 text-xl leading-relaxed whitespace-pre-line">{intro.desc}</p>
-              </div>
+              </motion.div>
 
-              <div className="grid grid-cols-3 gap-3">
-                <div className="rounded-2xl bg-green-50 border border-green-100 p-4 text-center">
-                  <div className="text-2xl mb-1">🛒</div>
-                  <p className="text-sm font-semibold text-green-800">{intro.groceries}</p>
-                </div>
-                <div className="rounded-2xl bg-green-50 border border-green-100 p-4 text-center">
-                  <div className="text-2xl mb-1">📦</div>
-                  <p className="text-sm font-semibold text-green-800">{intro.pharmacy}</p>
-                </div>
-                <div className="rounded-2xl bg-green-50 border border-green-100 p-4 text-center">
-                  <div className="text-2xl mb-1">📍</div>
-                  <p className="text-sm font-semibold text-green-800">{intro.errands}</p>
-                </div>
-              </div>
-
-              <button
-                onClick={() => setStep(2)}
-                className="w-full py-4 rounded-xl font-semibold text-white text-base"
-                style={{
-                  background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
-                  boxShadow: '0 4px 16px rgba(22,163,74,0.35)',
-                }}
+              <motion.div
+                className="flex items-center gap-5"
+                variants={{ hidden: { opacity: 0, y: 24 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' } } }}
               >
-                {intro.start}
-              </button>
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-green-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.687-7.148a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0z" />
+                  </svg>
+                  <span className="text-sm font-semibold text-green-800">{intro.groceries}</span>
+                </div>
+                <span className="w-px h-4 bg-green-200" />
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-green-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m21 7.5-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
+                  </svg>
+                  <span className="text-sm font-semibold text-green-800">{intro.pharmacy}</span>
+                </div>
+                <span className="w-px h-4 bg-green-200" />
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-green-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0z" />
+                  </svg>
+                  <span className="text-sm font-semibold text-green-800">{intro.errands}</span>
+                </div>
+              </motion.div>
 
-              <button
-                onClick={() => setStep(5)}
-                className="w-full py-3.5 rounded-xl font-semibold text-sm border-2 border-green-600 text-green-700 hover:bg-green-50 transition-colors"
+              <motion.div
+                variants={{ hidden: { opacity: 0, y: 24 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' } } }}
+                className="space-y-3"
               >
-                {intro.skip}
-              </button>
-
-              <div className="pt-2 text-center">
-                <a
-                  href="/prototype"
-                  className="text-xs text-gray-300 hover:text-green-600 transition-colors underline underline-offset-2"
+                <button
+                  onClick={() => setStep(2)}
+                  className="w-full py-4 rounded-xl font-semibold text-white text-base"
+                  style={{
+                    background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
+                    boxShadow: '0 4px 16px rgba(22,163,74,0.35)',
+                  }}
                 >
-                  {surveyLang === 'de' ? 'Prototyp-Bericht ansehen' : 'View prototype report'}
-                </a>
-              </div>
-            </div>
+                  {intro.start}
+                </button>
+
+                <button
+                  onClick={() => setStep(5)}
+                  className="w-full py-3.5 rounded-xl font-semibold text-sm border-2 border-green-600 text-green-700 hover:bg-green-50 transition-colors"
+                >
+                  {intro.skip}
+                </button>
+
+                <div className="pt-2 text-center">
+                  <a
+                    href="/prototype"
+                    className="text-xs text-gray-300 hover:text-green-600 transition-colors underline underline-offset-2"
+                  >
+                    {surveyLang === 'de' ? 'Prototyp-Bericht ansehen' : 'View prototype report'}
+                  </a>
+                </div>
+              </motion.div>
+            </motion.div>
           )}
 
           {step === 2 && (

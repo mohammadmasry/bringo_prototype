@@ -20,6 +20,20 @@
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
+  .shimmer-text {
+    background: linear-gradient(225deg, #15803d 0%, #22c55e 35%, #d1fae5 50%, #22c55e 65%, #15803d 100%);
+    background-size: 300% 300%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: shimmer 8s ease-in-out infinite;
+  }
+}
+
+@keyframes shimmer {
+  0%   { background-position: 100% 0%; }
+  50%  { background-position: 0% 100%; }
+  100% { background-position: 100% 0%; }
 }
 
 @keyframes fadeInUp {
