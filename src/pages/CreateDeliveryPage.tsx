@@ -4,7 +4,7 @@ import BringoLogo from '../components/BringoLogo'
 import LangToggle from '../components/LangToggle'
 import { useLang } from '../hooks/useLang'
 import ComingSoonSheet from '../components/ComingSoonSheet'
-import { calculatePrice, type ItemRange } from '../lib/pricing'
+import { calculatePrice, getTimeSlots, getSlotById, type ItemRange, type TimeSlot } from '../lib/pricing'
 import DeliveryMap, { type Coords } from '../components/DeliveryMap'
 
 const PICKUP_PRESETS = [
@@ -21,7 +21,6 @@ const DROPOFF_PRESETS = [
   { label: 'Kirchgasse 5, 84347 Pfarrkirchen', lat: 48.4364, lon: 12.9473 },
 ]
 
-const TIME_SLOTS = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00']
 
 const tr = {
   de: {
@@ -64,8 +63,13 @@ const tr = {
     nowTitle: 'Jetzt', nowSub: 'Kurier wird sofort gesucht',
     laterTitle: 'Später', laterSub: 'Lieferung für später einplanen',
     dateLabel: 'Datum', timeLabel: 'Uhrzeit',
-    when: 'Wann', asap: 'Sofort',
-    priceBase: 'Grundpreis', priceDist: 'Entfernung', pricePeak: 'Stoßzeit', priceTotal: 'Gesamt',
+    when: 'Wann', asap: 'Sofort', express: 'Express',
+    expressLabel: 'Express', expressSub: '~30 Min.', expressNote: '+€2,00 Expressaufschlag',
+    slotToday: 'Heute', slotTomorrow: 'Morgen',
+    slotSelect: 'Zeitfenster wählen',
+    slotNoSlots: 'Heute keine Slots mehr verfügbar — bitte Morgen wählen.',
+    priceBase: 'Grundpreis', priceDist: 'Entfernung', pricePeak: 'Stoßzeit', priceDiscount: 'Rabatt',
+    priceExpress: 'Expressaufschlag', priceTotal: 'Gesamt',
     priceStores: 'Läden', priceItems: 'Artikel',
   },
   en: {
@@ -108,8 +112,13 @@ const tr = {
     nowTitle: 'Now', nowSub: 'Courier found immediately',
     laterTitle: 'Later', laterSub: 'Schedule delivery for later',
     dateLabel: 'Date', timeLabel: 'Time',
-    when: 'When', asap: 'ASAP',
-    priceBase: 'Base price', priceDist: 'Distance', pricePeak: 'Peak hour', priceTotal: 'Total',
+    when: 'When', asap: 'ASAP', express: 'Express',
+    expressLabel: 'Express', expressSub: '~30 min', expressNote: '+€2.00 express fee',
+    slotToday: 'Today', slotTomorrow: 'Tomorrow',
+    slotSelect: 'Choose time slot',
+    slotNoSlots: 'No more slots available today — please choose Tomorrow.',
+    priceBase: 'Base price', priceDist: 'Distance', pricePeak: 'Peak hour', priceDiscount: 'Discount',
+    priceExpress: 'Express fee', priceTotal: 'Total',
     priceStores: 'Stores', priceItems: 'Items',
   },
 }
@@ -287,9 +296,11 @@ export default function CreateDeliveryPage() {
   const [stores, setStores] = useState<1 | 2 | 3>(1)
   const [itemRange, setItemRange] = useState<ItemRange>('1-5')
   const [note, setNote] = useState('')
-  const [scheduleType, setScheduleType] = useState<'now' | 'later'>('now')
-  const [scheduleDate, setScheduleDate] = useState('')
-  const [scheduleTime, setScheduleTime] = useState('')
+  const [scheduleType, setScheduleType] = useState<'now' | 'later' | 'express'>('later')
+  const [calendarDay, setCalendarDay] = useState<string>(() => new Date().toISOString().split('T')[0])
+  const [selectedSlotId, setSelectedSlotId] = useState<string | null>(
+    (state as { slotId?: string } | null)?.slotId ?? null
+  )
   const [pickupSugs, setPickupSugs] = useState<NomResult[]>([])
   const [dropoffSugs, setDropoffSugs] = useState<NomResult[]>([])
   const [pickupFocused, setPickupFocused] = useState(false)
@@ -341,7 +352,7 @@ export default function CreateDeliveryPage() {
     : step === 1 ? !!pickupCoords
     : step === 2 ? !!dropoffCoords
     : step === 3 ? (orderType === 'shopping' ? shoppingList.trim().length > 2 : true)
-    : step === 4 ? scheduleType === 'now' || (scheduleDate !== '' && scheduleTime !== '')
+    : step === 4 ? scheduleType === 'express' || selectedSlotId !== null
     : true
 
   const goNext = () => { if (step < 5) setStep(s => s + 1); else setStep(6) }
@@ -647,66 +658,146 @@ export default function CreateDeliveryPage() {
           </div>
         )}
 
-        {step === 4 && (
-          <div className="animate-fade-in-up">
-            <p className="text-xs font-semibold text-green-600 uppercase tracking-wider mb-1">{t.stepOf(4)}</p>
-            <h1 className="text-3xl font-black text-gray-900 mb-2">{t.s4Title}</h1>
-            <p className="text-gray-400 text-sm mb-6">{t.s4Sub}</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
-              {(['now', 'later'] as const).map(type => {
-                const selected = scheduleType === type
-                return (
-                  <button key={type} onClick={() => setScheduleType(type)}
-                    className="p-5 rounded-2xl border-2 text-left transition-all"
-                    style={{ borderColor: selected ? '#16a34a' : '#e5e7eb', background: selected ? '#f0fdf4' : 'white' }}>
-                    <p className="text-2xl mb-2">{type === 'now' ? '⚡' : '📅'}</p>
-                    <p className="text-sm font-bold" style={{ color: selected ? '#15803d' : '#111827' }}>
-                      {type === 'now' ? t.nowTitle : t.laterTitle}
-                    </p>
-                    <p className="text-xs text-gray-400 mt-0.5 leading-tight">
-                      {type === 'now' ? t.nowSub : t.laterSub}
-                    </p>
-                  </button>
-                )
-              })}
-            </div>
-            {scheduleType === 'later' && (
-              <div className="space-y-5">
-                <div>
-                  <p className="text-sm font-semibold text-gray-700 mb-3">{t.dateLabel}</p>
-                  <div className="flex gap-2 overflow-x-auto pb-1">
-                    {Array.from({ length: 14 }, (_, i) => {
-                      const d = new Date(Date.now() + i * 24 * 60 * 60 * 1000)
-                      const iso = d.toISOString().split('T')[0]
-                      const dayName = d.toLocaleDateString(lang === 'de' ? 'de-DE' : 'en-GB', { weekday: 'short' })
-                      const selected = scheduleDate === iso
-                      return (
-                        <button key={iso} onClick={() => setScheduleDate(iso)}
-                          className="flex flex-col items-center shrink-0 w-12 py-2.5 rounded-xl border-2 transition-all"
-                          style={{ borderColor: selected ? '#16a34a' : '#e5e7eb', background: selected ? '#f0fdf4' : 'white', color: selected ? '#15803d' : '#374151' }}>
-                          <span className="text-xs font-semibold">{dayName}</span>
-                          <span className="text-base font-black">{d.getDate()}</span>
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-gray-700 mb-3">{t.timeLabel}</p>
-                  <div className="grid grid-cols-4 gap-2">
-                    {TIME_SLOTS.map(slot => (
-                      <button key={slot} onClick={() => setScheduleTime(slot)}
-                        className="py-2.5 rounded-xl text-sm font-semibold border-2 transition-all"
-                        style={{ borderColor: scheduleTime === slot ? '#16a34a' : '#e5e7eb', background: scheduleTime === slot ? '#f0fdf4' : 'white', color: scheduleTime === slot ? '#15803d' : '#374151' }}>
-                        {slot}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+        {step === 4 && (() => {
+          const dayOptions = [
+            { key: 'express', label: t.expressLabel, sub: t.expressSub, iso: null },
+            ...Array.from({ length: 7 }, (_, i) => {
+              const d = new Date(Date.now() + i * 86400000)
+              const iso = d.toISOString().split('T')[0]
+              const label = i === 0
+                ? t.slotToday
+                : i === 1
+                ? t.slotTomorrow
+                : d.toLocaleDateString(lang === 'de' ? 'de-DE' : 'en-GB', { weekday: 'short' })
+              const sub = d.toLocaleDateString(lang === 'de' ? 'de-DE' : 'en-GB', { day: 'numeric', month: 'short' })
+              return { key: iso, label, sub, iso }
+            }),
+          ]
+          const slots = scheduleType !== 'express' ? getTimeSlots(calendarDay) : []
+
+          return (
+            <div className="animate-fade-in-up">
+              <p className="text-xs font-semibold text-green-600 uppercase tracking-wider mb-1">{t.stepOf(4)}</p>
+              <h1 className="text-3xl font-black text-gray-900 mb-2">{t.s4Title}</h1>
+              <p className="text-gray-400 text-sm mb-5">{t.s4Sub}</p>
+
+              {/* Horizontal day picker */}
+              <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1" style={{ scrollbarWidth: 'none' }}>
+                {dayOptions.map(day => {
+                  const isExpress = day.key === 'express'
+                  const sel = isExpress ? scheduleType === 'express' : calendarDay === day.key && scheduleType !== 'express'
+                  return (
+                    <button key={day.key}
+                      onClick={() => {
+                        if (isExpress) {
+                          setScheduleType('express')
+                          setCalendarDay('express')
+                          setSelectedSlotId(null)
+                        } else {
+                          setCalendarDay(day.key)
+                          setScheduleType('later')
+                          setSelectedSlotId(null)
+                        }
+                      }}
+                      className="shrink-0 flex flex-col items-center px-3.5 py-3 rounded-2xl border-2 transition-all min-w-[68px]"
+                      style={{
+                        borderColor: sel ? '#16a34a' : '#e5e7eb',
+                        background: sel && isExpress
+                          ? 'linear-gradient(135deg, #92400e, #d97706)'
+                          : sel ? '#f0fdf4' : 'white',
+                      }}>
+                      {isExpress ? (
+                        <>
+                          <svg viewBox="0 0 20 20" fill={sel ? '#fde68a' : '#d97706'} width="16" height="16" className="mb-1">
+                            <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd"/>
+                          </svg>
+                          <span className="text-xs font-black" style={{ color: sel ? '#fde68a' : '#92400e' }}>
+                            {day.label}
+                          </span>
+                          <span className="text-xs font-medium mt-0.5" style={{ color: sel ? 'rgba(255,255,255,0.65)' : '#9ca3af' }}>
+                            {day.sub}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-xs font-semibold mb-0.5" style={{ color: sel ? '#15803d' : '#6b7280' }}>
+                            {day.label}
+                          </span>
+                          <span className="text-base font-black" style={{ color: sel ? '#15803d' : '#111827' }}>
+                            {new Date(day.iso + 'T12:00:00').getDate()}
+                          </span>
+                          <span className="text-xs" style={{ color: sel ? '#16a34a' : '#9ca3af' }}>
+                            {new Date(day.iso + 'T12:00:00').toLocaleDateString(lang === 'de' ? 'de-DE' : 'en-GB', { month: 'short' })}
+                          </span>
+                        </>
+                      )}
+                    </button>
+                  )
+                })}
               </div>
-            )}
-          </div>
-        )}
+
+              {/* Express note */}
+              {scheduleType === 'express' && (
+                <div className="mt-4 flex items-center gap-2 px-4 py-3 rounded-xl"
+                  style={{ background: '#fffbeb', border: '1px solid #fde68a' }}>
+                  <svg viewBox="0 0 20 20" fill="#d97706" width="14" height="14" className="shrink-0">
+                    <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd"/>
+                  </svg>
+                  <p className="text-xs font-semibold" style={{ color: '#92400e' }}>{t.expressNote}</p>
+                </div>
+              )}
+
+              {/* Slot grid */}
+              {scheduleType !== 'express' && (
+                <div className="mt-5 space-y-2">
+                  <p className="text-sm font-semibold text-gray-700 mb-3">{t.slotSelect}</p>
+                  {slots.length === 0
+                    ? <p className="text-sm text-gray-400 italic">{t.slotNoSlots}</p>
+                    : slots.map((slot: TimeSlot) => {
+                        const sel = selectedSlotId === slot.id
+                        return (
+                          <button key={slot.id}
+                            onClick={() => setSelectedSlotId(slot.id)}
+                            className="w-full flex items-center justify-between px-4 py-3.5 rounded-2xl border-2 transition-all"
+                            style={{
+                              borderColor: sel ? '#16a34a' : '#e5e7eb',
+                              background: sel ? '#f0fdf4' : 'white',
+                            }}>
+                            <span className="text-sm font-bold tabular-nums" style={{ color: sel ? '#15803d' : '#111827' }}>
+                              {slot.label}
+                            </span>
+                            {slot.tag === 'surcharge' && (
+                              <span className="flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full"
+                                style={{ background: '#fffbeb', color: '#d97706', border: '1px solid #fde68a' }}>
+                                <svg viewBox="0 0 20 20" fill="currentColor" width="11" height="11">
+                                  <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd"/>
+                                </svg>
+                                {slot.tagLabel}
+                              </span>
+                            )}
+                            {slot.tag === 'discount' && (
+                              <span className="flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full"
+                                style={{ background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0' }}>
+                                <svg viewBox="0 0 20 20" fill="currentColor" width="11" height="11">
+                                  <path fillRule="evenodd" d="M5 2a2 2 0 00-2 2v14l3.5-2 3.5 2 3.5-2 3.5 2V4a2 2 0 00-2-2H5zm4.707 3.707a1 1 0 00-1.414-1.414l-3 3a1 1 0 000 1.414l3 3a1 1 0 001.414-1.414L8.414 10l1.293-1.293zM11 6a1 1 0 011 1v6a1 1 0 11-2 0V7a1 1 0 011-1zm2.293 7.293a1 1 0 001.414-1.414L13.414 10l1.293-1.293a1 1 0 00-1.414-1.414l-3 3a1 1 0 000 1.414l3 3z" clipRule="evenodd"/>
+                                </svg>
+                                {slot.tagLabel}
+                              </span>
+                            )}
+                            {slot.tag === 'normal' && sel && (
+                              <svg viewBox="0 0 20 20" fill="#16a34a" width="18" height="18">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
+                              </svg>
+                            )}
+                          </button>
+                        )
+                      })
+                  }
+                </div>
+              )}
+            </div>
+          )
+        })()}
 
         {step === 5 && (
           <div className="animate-fade-in-up">
@@ -740,11 +831,30 @@ export default function CreateDeliveryPage() {
               </div>
             </div>
             {(() => {
+              const selectedSlot = selectedSlotId ? getSlotById(selectedSlotId) : undefined
               const p = calculatePrice(
-                pickup, dropoff, size, scheduleType, scheduleTime,
+                pickup, dropoff, size,
+                scheduleType === 'express' ? 'express' : scheduleType,
+                '',
                 orderType === 'shopping' ? stores : 1,
                 orderType === 'shopping' ? itemRange : '1-5',
+                scheduleType === 'express' ? null : (selectedSlot?.priceMod ?? null),
               )
+              const todayIso = new Date().toISOString().split('T')[0]
+              const tomorrowIso = new Date(Date.now() + 86400000).toISOString().split('T')[0]
+              const whenLabel = scheduleType === 'express'
+                ? `${t.expressLabel} · ${t.expressSub}`
+                : (() => {
+                    const slot = selectedSlot
+                    const dayLabel = calendarDay === todayIso
+                      ? t.slotToday
+                      : calendarDay === tomorrowIso
+                      ? t.slotTomorrow
+                      : calendarDay !== 'express'
+                      ? new Date(calendarDay + 'T12:00:00').toLocaleDateString(lang === 'de' ? 'de-DE' : 'en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
+                      : ''
+                    return slot ? `${dayLabel} · ${slot.label}` : '—'
+                  })()
               return (
                 <div className="bg-white rounded-2xl border border-green-100 mb-3 overflow-hidden"
                   style={{ boxShadow: '0 0 0 2px rgba(22,163,74,0.1)' }}>
@@ -759,20 +869,37 @@ export default function CreateDeliveryPage() {
                     </div>
                     {p.storesSurcharge > 0 && (
                       <div className="flex justify-between text-sm text-gray-500">
-                        <span>🏪 {t.priceStores} ({stores === 3 ? '3+' : stores})</span>
+                        <span>{t.priceStores} ({stores === 3 ? '3+' : stores})</span>
                         <span>+ €{p.storesSurcharge.toFixed(2)}</span>
                       </div>
                     )}
                     {p.itemsSurcharge > 0 && (
                       <div className="flex justify-between text-sm text-gray-500">
-                        <span>📦 {t.priceItems} ({itemRange})</span>
+                        <span>{t.priceItems} ({itemRange})</span>
                         <span>+ €{p.itemsSurcharge.toFixed(2)}</span>
                       </div>
                     )}
-                    {p.isPeak && (
+                    {p.expressSurcharge > 0 && (
+                      <div className="flex justify-between text-sm font-semibold" style={{ color: '#d97706' }}>
+                        <span className="flex items-center gap-1">
+                          <svg viewBox="0 0 20 20" fill="currentColor" width="13" height="13">
+                            <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd"/>
+                          </svg>
+                          {t.priceExpress}
+                        </span>
+                        <span>+ €{p.expressSurcharge.toFixed(2)}</span>
+                      </div>
+                    )}
+                    {p.peakSurcharge > 0 && (
                       <div className="flex justify-between text-sm text-amber-600">
-                        <span>⚡ {t.pricePeak}</span>
+                        <span>{t.pricePeak}</span>
                         <span>+ €{p.peakSurcharge.toFixed(2)}</span>
+                      </div>
+                    )}
+                    {p.peakSurcharge < 0 && (
+                      <div className="flex justify-between text-sm text-green-600">
+                        <span>{t.priceDiscount}</span>
+                        <span>− €{Math.abs(p.peakSurcharge).toFixed(2)}</span>
                       </div>
                     )}
                     <div className="flex justify-between items-center pt-2 border-t border-gray-100">
@@ -781,11 +908,14 @@ export default function CreateDeliveryPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 px-5 py-3 bg-gray-50 border-t border-gray-100">
-                    <span className="text-base">{scheduleType === 'now' ? '⚡' : '📅'}</span>
+                    <svg viewBox="0 0 20 20" fill={scheduleType === 'express' ? '#d97706' : '#6b7280'} width="16" height="16" className="shrink-0">
+                      {scheduleType === 'express'
+                        ? <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd"/>
+                        : <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd"/>
+                      }
+                    </svg>
                     <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{t.when}:</p>
-                    <p className="text-sm font-bold text-gray-900">
-                      {scheduleType === 'now' ? t.asap : `${scheduleDate} · ${scheduleTime}`}
-                    </p>
+                    <p className="text-sm font-bold text-gray-900">{whenLabel}</p>
                   </div>
                 </div>
               )

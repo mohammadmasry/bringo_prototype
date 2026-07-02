@@ -3,6 +3,8 @@ export interface DetectedOrder {
   dropoff: string
   description: string
   size: 'S' | 'M' | 'L'
+  slotId?: string            // e.g. "s1416" — pre-selects time slot in step 4
+  scheduleDay?: 'today' | 'tomorrow'
 }
 
 export interface GroqMessage {
@@ -16,19 +18,34 @@ ABOUT BRINGO:
 - Service area: Pfarrkirchen and surroundings (~5 km radius)
 - Couriers: verified university students only
 - Average delivery time: ~25 minutes
-- Prices: Small (envelope, documents) €3.20 · Medium (books, bag, groceries) €4.50 · Large (box, multiple items) €5.80
+- Base prices: Small (envelope, documents) €5.00 · Medium (books, bag, groceries) €6.00 · Large (box, multiple items) €7.50
 - Payment: cash on delivery or card
 - To become a courier: must be a registered student, 18+, with a university email
+
+TIME SLOTS & DYNAMIC PRICING:
+Orders can be placed for "now" (immediate) or a specific 2-hour delivery window.
+Each slot applies a price modifier to the base price:
+- 08:00–10:00 (id: s0810): normal price
+- 10:00–12:00 (id: s1012): normal price
+- 12:00–14:00 (id: s1214): +15% surcharge — lunch rush (Stoßzeit)
+- 14:00–16:00 (id: s1416): −10% discount — cheapest option (günstig)
+- 16:00–18:00 (id: s1618): −5% discount — affordable
+- 18:00–20:00 (id: s1820): +15% surcharge — evening rush (Stoßzeit)
+- 20:00–22:00 (id: s2022): normal price
+If a customer asks for the cheapest time → suggest 14:00–16:00 (−10%).
+If a customer asks for the fastest/soonest → suggest "now" or the next available slot.
 
 YOUR JOB:
 1. Answer questions about Bringo briefly and warmly
 2. Help customers place orders by collecting pickup address, dropoff address, and what the item is
+3. Suggest the best time slot based on customer preferences (cheap, fast, convenient)
 
 ORDER DETECTION:
-When the customer clearly wants to place an order AND you know both pickup and dropoff, append this exact line at the very end of your response:
-||ORDER||{"pickup":"<address>","dropoff":"<address>","description":"<item>","size":"<S|M|L>"}
+When the customer clearly wants to place an order AND you know both pickup and dropoff, append this exact JSON at the very end of your response:
+||ORDER||{"pickup":"<address>","dropoff":"<address>","description":"<item>","size":"<S|M|L>","slotId":"<slot-id or null>","scheduleDay":"<today|tomorrow|null>"}
 
 Size guide: S = envelope/documents/small items · M = books/bag/groceries · L = large box/multiple heavy items. Default to M if unsure.
+Set slotId to null for immediate "now" orders. Use slot ids from the list above.
 
 Rules:
 - Reply in the same language the customer uses (German or English)
@@ -110,6 +127,9 @@ export async function askGroq(
             dropoff: parsed.dropoff,
             description: parsed.description || '',
             size: (['S', 'M', 'L'] as const).includes(parsed.size) ? parsed.size : 'M',
+            slotId: parsed.slotId && parsed.slotId !== 'null' ? parsed.slotId : undefined,
+            scheduleDay: parsed.scheduleDay === 'today' || parsed.scheduleDay === 'tomorrow'
+              ? parsed.scheduleDay : undefined,
           }
         }
       } catch {}

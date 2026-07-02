@@ -4,12 +4,49 @@ export interface PriceBreakdown {
   peakSurcharge: number
   storesSurcharge: number
   itemsSurcharge: number
+  expressSurcharge: number
   total: number
   estimatedKm: number
   isPeak: boolean
+  isExpress: boolean
 }
 
+export const EXPRESS_SURCHARGE = 2.00
+
 export type ItemRange = '1-5' | '6-15' | '16+'
+
+export interface TimeSlot {
+  id: string
+  start: number       // 24h hour
+  end: number
+  label: string       // "14:00 – 16:00"
+  priceMod: number    // fraction: -0.10 = −10%, +0.15 = +15%
+  tag: 'discount' | 'surcharge' | 'normal'
+  tagLabel: string    // "−10 %", "+15 %", ""
+}
+
+const BASE_SLOTS: TimeSlot[] = [
+  { id: 's0810', start: 8,  end: 10, label: '08:00 – 10:00', priceMod: 0,     tag: 'normal',    tagLabel: '' },
+  { id: 's1012', start: 10, end: 12, label: '10:00 – 12:00', priceMod: 0,     tag: 'normal',    tagLabel: '' },
+  { id: 's1214', start: 12, end: 14, label: '12:00 – 14:00', priceMod: 0.15,  tag: 'surcharge', tagLabel: '+15 %' },
+  { id: 's1416', start: 14, end: 16, label: '14:00 – 16:00', priceMod: -0.10, tag: 'discount',  tagLabel: '−10 %' },
+  { id: 's1618', start: 16, end: 18, label: '16:00 – 18:00', priceMod: -0.05, tag: 'discount',  tagLabel: '−5 %' },
+  { id: 's1820', start: 18, end: 20, label: '18:00 – 20:00', priceMod: 0.15,  tag: 'surcharge', tagLabel: '+15 %' },
+  { id: 's2022', start: 20, end: 22, label: '20:00 – 22:00', priceMod: 0,     tag: 'normal',    tagLabel: '' },
+]
+
+export function getTimeSlots(dateIso: string): TimeSlot[] {
+  const todayIso = new Date().toISOString().split('T')[0]
+  if (dateIso === todayIso) {
+    const nowHour = new Date().getHours()
+    return BASE_SLOTS.filter(s => s.start > nowHour)
+  }
+  return BASE_SLOTS
+}
+
+export function getSlotById(id: string): TimeSlot | undefined {
+  return BASE_SLOTS.find(s => s.id === id)
+}
 
 const BASE_PRICES: Record<'S' | 'M' | 'L', number> = { S: 5.00, M: 6.00, L: 7.50 }
 
@@ -35,7 +72,6 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): nu
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }
 
-// For custom addresses not in the lookup: derive a consistent pseudo-distance from the string
 function pseudoKm(a: string, b: string): number {
   const str = a + b
   let hash = 0
@@ -58,7 +94,6 @@ function distanceSurcharge(km: number): number {
   return 2.00
 }
 
-// Peak: 12:00-14:00 and 17:00-20:00
 function isPeakHour(hour: number): boolean {
   return (hour >= 12 && hour < 14) || (hour >= 17 && hour < 20)
 }
@@ -70,23 +105,36 @@ export function calculatePrice(
   pickup: string,
   dropoff: string,
   size: 'S' | 'M' | 'L',
-  scheduleType: 'now' | 'later',
+  scheduleType: 'now' | 'later' | 'express',
   scheduleTime: string,
   stores: 1 | 2 | 3 = 1,
   itemRange: ItemRange = '1-5',
+  slotPriceMod: number | null = null,
 ): PriceBreakdown {
   const km = estimateKm(pickup, dropoff)
   const base = BASE_PRICES[size]
   const distSurcharge = distanceSurcharge(km)
   const storesSurcharge = STORES_SURCHARGE[stores]
   const itemsSurcharge = ITEMS_SURCHARGE[itemRange]
+  const isExpress = scheduleType === 'express'
+  const expressSurcharge = isExpress ? EXPRESS_SURCHARGE : 0
 
-  const hour = scheduleType === 'later' && scheduleTime
-    ? parseInt(scheduleTime.split(':')[0], 10)
-    : new Date().getHours()
+  let peakSurcharge: number
+  let isPeak: boolean
 
-  const peak = isPeakHour(hour)
-  const peakSurcharge = peak ? 0.50 : 0
+  if (isExpress) {
+    peakSurcharge = 0
+    isPeak = false
+  } else if (slotPriceMod !== null) {
+    peakSurcharge = Math.round(base * slotPriceMod * 100) / 100
+    isPeak = slotPriceMod > 0
+  } else {
+    const hour = scheduleType === 'later' && scheduleTime
+      ? parseInt(scheduleTime.split(':')[0], 10)
+      : new Date().getHours()
+    isPeak = isPeakHour(hour)
+    peakSurcharge = isPeak ? 0.50 : 0
+  }
 
   return {
     base,
@@ -94,8 +142,10 @@ export function calculatePrice(
     storesSurcharge,
     itemsSurcharge,
     peakSurcharge,
-    total: Math.round((base + distSurcharge + storesSurcharge + itemsSurcharge + peakSurcharge) * 100) / 100,
+    expressSurcharge,
+    total: Math.round((base + distSurcharge + storesSurcharge + itemsSurcharge + peakSurcharge + expressSurcharge) * 100) / 100,
     estimatedKm: Math.round(km * 10) / 10,
-    isPeak: peak,
+    isPeak,
+    isExpress,
   }
 }
