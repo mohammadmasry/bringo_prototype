@@ -674,6 +674,16 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
                 </svg>
               </button>
+
+              <p className="text-center text-sm text-gray-400 pt-1">
+                {surveyLang === 'de' ? 'Oder bestellen Sie mit unserem ' : 'Or order with our '}
+                <button
+                  onClick={() => navigate('/easy-order')}
+                  className="text-green-600 font-semibold hover:text-green-700 hover:underline transition-colors"
+                >
+                  {surveyLang === 'de' ? '✨ KI-Assistenten' : '✨ AI assistant'}
+                </button>
+              </p>
             </div>
           )}
         </div>

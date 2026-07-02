@@ -469,7 +469,6 @@ export default function ProfitLossCalculator() {
 
       <aside className="pl-left">
         <div className="pl-logo">
-          <div className="pl-logo-icon">↗</div>
           <strong>bringo</strong>
         </div>
 

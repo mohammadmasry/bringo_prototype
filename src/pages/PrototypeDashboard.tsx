@@ -129,11 +129,6 @@ export default function PrototypeDashboard() {
           </svg>
         </button>
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #16a34a, #14532d)' }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="white" aria-hidden="true">
-              <path d="M12 2C8.686 2 6 4.686 6 8c0 1.77.734 3.37 1.91 4.51L5 22h14l-2.91-9.49A5.99 5.99 0 0 0 18 8c0-3.314-2.686-6-6-6zm0 2a4 4 0 1 1 0 8 4 4 0 0 1 0-8z" />
-            </svg>
-          </div>
           <span className="font-bold text-gray-900 text-sm">bringo</span>
           <span className="text-gray-300 mx-1">·</span>
           <span className="text-sm text-gray-500">Prototype Report · June 2026</span>
