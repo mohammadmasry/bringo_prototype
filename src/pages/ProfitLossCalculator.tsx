@@ -37,7 +37,7 @@ const DEFAULTS = {
   carCostKm: 0.3,
   operationalLossPct: 3,
 
-  fundingEnabled: false,
+  fundingEnabled: true,
   fundingPct: 50,
 
   cargoBikeMode: "lease",
@@ -396,13 +396,19 @@ export default function ProfitLossCalculator() {
       ? totalTripsYear * tripHours * a.minimumWage
       : a.courierPersons * a.allowancePerPersonYear;
     const courierEmployerOnCosts = a.courierPayModel === "minimumWage" ? courierBaseLabor * (a.employerOnCostPct / 100) : 0;
-    const courierLabor = courierBaseLabor + courierEmployerOnCosts;
+    const rawCourierLabor = courierBaseLabor + courierEmployerOnCosts;
 
     const managementBaseLabor = a.managementPayModel === "minimumWage"
       ? a.managementHoursMonth * 12 * a.minimumWage * managementPersons
       : managementPersons * a.allowancePerPersonYear;
     const managementEmployerOnCosts = a.managementPayModel === "minimumWage" ? managementBaseLabor * (a.employerOnCostPct / 100) : 0;
-    const managementLabor = managementBaseLabor + managementEmployerOnCosts;
+    const rawManagementLabor = managementBaseLabor + managementEmployerOnCosts;
+
+    // Förderung "digitale regionale Heimatprojekte": reduce courier labour, staff management and marketing directly
+    const fundingDiscount = a.fundingEnabled ? (a.fundingPct / 100) : 0;
+    const courierLabor = rawCourierLabor * (1 - fundingDiscount);
+    const managementLabor = rawManagementLabor * (1 - fundingDiscount);
+    const marketingCost = a.marketingYear * (1 - fundingDiscount);
 
     const carTrips = totalTripsYear * (a.carSharePct / 100);
     const carCosts = carTrips * a.kmPerCarTrip * a.carCostKm;
@@ -421,15 +427,17 @@ export default function ProfitLossCalculator() {
     const cogs = courierLabor + carCosts + paymentFees + operationalLoss + bikePurchaseAnnualized + cargoBikeAnnualized + cargoBikeLease + bikeEquipment + bikeMaintenance;
     const grossProfit = operatingRevenue - cogs;
 
-    const operatingOpex = a.insuranceYear + a.marketingYear + a.basicAdminYear + a.accountingTaxYear + a.legalComplianceYear + a.customerSupportYear;
+    const operatingOpex = a.insuranceYear + marketingCost + a.basicAdminYear + a.accountingTaxYear + a.legalComplianceYear + a.customerSupportYear;
     const sgaBeforeContingency = managementLabor + digitalCosts + operatingOpex;
     const contingency = (cogs + sgaBeforeContingency) * (a.contingencyPct / 100);
     const sga = sgaBeforeContingency + contingency;
 
-    const eligibleCosts = courierLabor + managementLabor + carCosts + a.marketingYear + digitalCosts + a.accountingTaxYear + a.legalComplianceYear + bikePurchaseAnnualized + cargoBikeAnnualized + cargoBikeLease + bikeEquipment + bikeMaintenance;
+    // Eligible costs = raw (pre-discount) values of the 3 items reduced by the funding
+    const eligibleCosts = rawCourierLabor + rawManagementLabor + a.marketingYear;
     const regionalFundingAmount = a.fundingEnabled ? eligibleCosts * (a.fundingPct / 100) : 0;
     const dseeFundingAmount = a.dseeFundingEnabled ? a.dseeFundingAmount : 0;
-    const totalFunding = regionalFundingAmount + dseeFundingAmount;
+    // Regional funding is now baked into reduced costs; only DSEE remains as an income credit
+    const totalFunding = dseeFundingAmount;
 
     const operatingProfit = grossProfit - sga + totalFunding;
     const netResult = operatingProfit;
@@ -441,7 +449,7 @@ export default function ProfitLossCalculator() {
     const operatingMargin = operatingRevenue > 0 ? (operatingProfit / operatingRevenue) * 100 : 0;
     const cogsPerTrip = totalTripsYear > 0 ? cogs / totalTripsYear : 0;
 
-    return { deliveriesMonth, errandTripsMonth, deliveriesYear, errandTripsYear, totalTripsYear, managementPersons, regularRevenue, reducedRevenue, businessRevenue, deliveryRevenue, errandRevenue, operatingRevenue, courierBaseLabor, courierEmployerOnCosts, courierLabor, managementBaseLabor, managementEmployerOnCosts, managementLabor, carTrips, carCosts, paymentFees, operationalLoss, bikePurchaseAnnualized, cargoBikeAnnualized, cargoBikeLease, bikeEquipment, bikeMaintenance, digitalCosts, operatingOpex, contingency, eligibleCosts, regionalFundingAmount, dseeFundingAmount, totalFunding, totalCostsBeforeFunding, cogs, cogsMargin, grossProfit, grossMargin, sga, sgaMargin, fundingMargin, operatingProfit, operatingMargin, netResult, cogsPerTrip };
+    return { deliveriesMonth, errandTripsMonth, deliveriesYear, errandTripsYear, totalTripsYear, managementPersons, regularRevenue, reducedRevenue, businessRevenue, deliveryRevenue, errandRevenue, operatingRevenue, courierBaseLabor, courierEmployerOnCosts, courierLabor, rawCourierLabor, managementBaseLabor, managementEmployerOnCosts, managementLabor, rawManagementLabor, marketingCost, carTrips, carCosts, paymentFees, operationalLoss, bikePurchaseAnnualized, cargoBikeAnnualized, cargoBikeLease, bikeEquipment, bikeMaintenance, digitalCosts, operatingOpex, contingency, eligibleCosts, regionalFundingAmount, dseeFundingAmount, totalFunding, totalCostsBeforeFunding, cogs, cogsMargin, grossProfit, grossMargin, sga, sgaMargin, fundingMargin, operatingProfit, operatingMargin, netResult, cogsPerTrip };
   }, [a]);
 
   const overviewTooltips = {
@@ -593,7 +601,7 @@ export default function ProfitLossCalculator() {
                 <td className="neg">{eur(r.sga)}</td>
                 <td>{pct(r.sgaMargin)}</td>
               </tr>
-              {(a.fundingEnabled || a.dseeFundingEnabled) && (
+              {a.dseeFundingEnabled && (
                 <tr>
                   <td><OverviewLabel tooltip={overviewTooltips.funding}>{t.totalFunding}</OverviewLabel></td>
                   <td className="pos">{eur(r.totalFunding)}</td>
@@ -639,24 +647,22 @@ export default function ProfitLossCalculator() {
               <tr><td><OverviewLabel tooltip={overviewTooltips.managementLabor}>{t.managementLabor}</OverviewLabel></td><td className="neg">{signed(-r.managementLabor)}</td></tr>
               <tr><td>{t.digitalCosts}</td><td className="neg">{signed(-r.digitalCosts)}</td></tr>
               <tr><td>{t.insurance}</td><td className="neg">{signed(-a.insuranceYear)}</td></tr>
-              <tr><td>{t.marketing}</td><td className="neg">{signed(-a.marketingYear)}</td></tr>
+              <tr><td>{t.marketing}</td><td className="neg">{signed(-r.marketingCost)}</td></tr>
               <tr><td>{t.basicAdmin}</td><td className="neg">{signed(-a.basicAdminYear)}</td></tr>
               <tr><td>{t.accountingTax}</td><td className="neg">{signed(-a.accountingTaxYear)}</td></tr>
               <tr><td>{t.legalCompliance}</td><td className="neg">{signed(-a.legalComplianceYear)}</td></tr>
               <tr><td>{t.customerSupport}</td><td className="neg">{signed(-a.customerSupportYear)}</td></tr>
               <tr><td>{t.contingency}</td><td className="neg">{signed(-r.contingency)}</td></tr>
               <tr className="sum"><td>{t.sgaOverview}</td><td className="neg">{signed(-r.sga)}</td></tr>
-              {(a.fundingEnabled || a.dseeFundingEnabled) && (
+              {a.fundingEnabled && (
+                <tr style={{ opacity: 0.65, fontStyle: "italic" }}>
+                  <td>{t.regionalFundingOutput} (−{a.fundingPct} % {lang === "de" ? "auf Kurier, PM, Marketing" : "on courier, mgmt, marketing"})</td>
+                  <td style={{ color: "#6b7280" }}>{eur(r.regionalFundingAmount)}</td>
+                </tr>
+              )}
+              {a.dseeFundingEnabled && (
                 <>
-                  {a.fundingEnabled && (
-                    <>
-                      <tr className="sum"><td>{t.eligibleCosts}</td><td>{eur(r.eligibleCosts)}</td></tr>
-                      <tr><td>{t.regionalFundingOutput} ({a.fundingPct} %)</td><td className="pos">{signed(r.regionalFundingAmount)}</td></tr>
-                    </>
-                  )}
-                  {a.dseeFundingEnabled && (
-                    <tr><td>{t.dseeFundingRevenue}</td><td className="pos">{signed(r.dseeFundingAmount)}</td></tr>
-                  )}
+                  <tr><td>{t.dseeFundingRevenue}</td><td className="pos">{signed(r.dseeFundingAmount)}</td></tr>
                   <tr className="sum"><td>{t.totalFunding}</td><td className="pos">{signed(r.totalFunding)}</td></tr>
                 </>
               )}
@@ -671,7 +677,9 @@ export default function ProfitLossCalculator() {
         <section className="pl-breakdown">
           <div><span>{t.ordersYear}</span><strong>{r.totalTripsYear}</strong></div>
           <div><span>{t.costsBeforeFunding}</span><strong>{eur(r.totalCostsBeforeFunding)}</strong></div>
-          <div><span>{t.totalFunding}</span><strong>{eur(r.totalFunding)}</strong></div>
+          {a.fundingEnabled && (
+            <div><span>{t.regionalFundingOutput}</span><strong>{eur(r.regionalFundingAmount)}</strong></div>
+          )}
           <div><span>{t.grossProfit}</span><strong>{eur(r.grossProfit)}</strong></div>
         </section>
       </main>

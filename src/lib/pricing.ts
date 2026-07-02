@@ -2,12 +2,16 @@ export interface PriceBreakdown {
   base: number
   distanceSurcharge: number
   peakSurcharge: number
+  storesSurcharge: number
+  itemsSurcharge: number
   total: number
   estimatedKm: number
   isPeak: boolean
 }
 
-const BASE_PRICES: Record<'S' | 'M' | 'L', number> = { S: 2.50, M: 3.50, L: 4.50 }
+export type ItemRange = '1-5' | '6-15' | '16+'
+
+const BASE_PRICES: Record<'S' | 'M' | 'L', number> = { S: 5.00, M: 6.00, L: 7.50 }
 
 // Approximate GPS coords for preset Pfarrkirchen addresses
 const COORDS: Record<string, [number, number]> = {
@@ -59,16 +63,23 @@ function isPeakHour(hour: number): boolean {
   return (hour >= 12 && hour < 14) || (hour >= 17 && hour < 20)
 }
 
+const STORES_SURCHARGE: Record<1 | 2 | 3, number> = { 1: 0, 2: 2.00, 3: 4.00 }
+const ITEMS_SURCHARGE: Record<ItemRange, number> = { '1-5': 0, '6-15': 1.00, '16+': 2.50 }
+
 export function calculatePrice(
   pickup: string,
   dropoff: string,
   size: 'S' | 'M' | 'L',
   scheduleType: 'now' | 'later',
   scheduleTime: string,
+  stores: 1 | 2 | 3 = 1,
+  itemRange: ItemRange = '1-5',
 ): PriceBreakdown {
   const km = estimateKm(pickup, dropoff)
   const base = BASE_PRICES[size]
   const distSurcharge = distanceSurcharge(km)
+  const storesSurcharge = STORES_SURCHARGE[stores]
+  const itemsSurcharge = ITEMS_SURCHARGE[itemRange]
 
   const hour = scheduleType === 'later' && scheduleTime
     ? parseInt(scheduleTime.split(':')[0], 10)
@@ -80,8 +91,10 @@ export function calculatePrice(
   return {
     base,
     distanceSurcharge: distSurcharge,
+    storesSurcharge,
+    itemsSurcharge,
     peakSurcharge,
-    total: Math.round((base + distSurcharge + peakSurcharge) * 100) / 100,
+    total: Math.round((base + distSurcharge + storesSurcharge + itemsSurcharge + peakSurcharge) * 100) / 100,
     estimatedKm: Math.round(km * 10) / 10,
     isPeak: peak,
   }

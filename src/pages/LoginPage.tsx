@@ -630,7 +630,7 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
               </div>
 
               <button
-                onClick={() => navigate('/easy-order')}
+                onClick={() => navigate('/create-delivery', { state: { orderType: 'shopping' } })}
                 className="w-full flex items-center gap-5 border-2 rounded-2xl p-5 text-left transition-all hover:border-green-500 hover:bg-green-50 group"
                 style={{ borderColor: '#e5e7eb' }}
               >
@@ -653,7 +653,7 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
               </button>
 
               <button
-                onClick={() => navigate('/create-delivery')}
+                onClick={() => navigate('/create-delivery', { state: { orderType: 'delivery' } })}
                 className="w-full flex items-center gap-5 border-2 rounded-2xl p-5 text-left transition-all hover:border-green-500 hover:bg-green-50 group"
                 style={{ borderColor: '#e5e7eb' }}
               >

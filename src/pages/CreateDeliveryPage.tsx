@@ -4,7 +4,7 @@ import BringoLogo from '../components/BringoLogo'
 import LangToggle from '../components/LangToggle'
 import { useLang } from '../hooks/useLang'
 import ComingSoonSheet from '../components/ComingSoonSheet'
-import { calculatePrice } from '../lib/pricing'
+import { calculatePrice, type ItemRange } from '../lib/pricing'
 import DeliveryMap, { type Coords } from '../components/DeliveryMap'
 
 const PICKUP_PRESETS = [
@@ -25,20 +25,38 @@ const TIME_SLOTS = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00
 
 const tr = {
   de: {
-    s1Title: 'Abholung', s1Sub: 'Wo soll Ihr Paket abgeholt werden?',
-    s2Title: 'Zielort', s2Sub: 'Wohin soll Ihr Paket geliefert werden?',
-    s3Title: 'Was wird geliefert?', s3Sub: 'Beschreiben Sie Ihren Artikel für den Kurier.',
+    // step 0
+    typeTitle: 'Was möchten Sie?', typeSub: 'Wählen Sie die Art Ihres Auftrags.',
+    shoppingTitle: 'Einkaufen & Liefern', shoppingDesc: 'Kurier kauft für Sie ein und liefert es zu Ihnen',
+    deliveryTitle: 'Nur Liefern', deliveryDesc: 'Kurier holt Ihr Paket ab und bringt es ans Ziel',
+    shoppingFrom: 'ab €5.00', deliveryFrom: 'ab €5.00',
+    // steps 1–2 (address labels adapt per type)
+    s1TitleShopping: 'Laden / Abholort', s1SubShopping: 'Bei welchem Geschäft soll eingekauft werden?',
+    s1TitleDelivery: 'Abholung', s1SubDelivery: 'Wo soll Ihr Paket abgeholt werden?',
+    s2Title: 'Zielort', s2Sub: 'Wohin soll geliefert werden?',
+    // step 3 shopping
+    s3TitleShopping: 'Einkaufsauftrag', s3SubShopping: 'Was und wo soll für Sie eingekauft werden?',
+    shoppingListLabel: 'Einkaufszettel', shoppingListPh: 'z.B. Milch 1L, Brot (Vollkorn), 6 Eier…',
+    storesLabel: 'Anzahl der Läden', store1: 'Laden', store2: 'Läden', store3: 'Läden',
+    itemsLabel: 'Anzahl der Artikel', itemsFew: 'wenige', itemsMed: 'mittel', itemsMany: 'viele',
+    // step 3 delivery
+    s3TitleDelivery: 'Was wird geliefert?', s3SubDelivery: 'Beschreiben Sie Ihr Paket für den Kurier.',
+    itemDescLabel: 'Was liefern wir?', itemDescPh: 'z.B. "Laptop in Tasche", "Dokumente"',
+    fragilLabel: 'Zerbrechlich?', fragilYes: 'Ja, vorsichtig', fragilNo: 'Nein',
+    sizeLabel: 'Paketgröße',
+    sSmallTitle: 'Klein', sSmallSub: 'Umschlag, Dokumente',
+    sMediumTitle: 'Mittel', sMediumSub: 'Bücher, Tragetasche',
+    sLargeTitle: 'Groß', sLargeSub: 'Karton, mehrere Teile',
+    // step 4
     s4Title: 'Wann?', s4Sub: 'Soll die Lieferung jetzt oder später erfolgen?',
+    // step 5
     s5Title: 'Bestellung prüfen', s5Sub: 'Alles korrekt?',
+    orderTypeBadgeShopping: 'Einkauf', orderTypeBadgeDelivery: 'Lieferung',
     pickupLabel: 'Abholadresse', dropoffLabel: 'Lieferadresse',
     orChoose: 'oder schnell wählen:',
     searchPh: 'Adresse eingeben…',
     noteLabel: 'Nachricht an den Kurier', notePh: 'z.B. "3. OG, Klingel Schmidt"',
     optional: 'optional',
-    sizeLabel: 'Paketgröße',
-    sSmallTitle: 'Klein', sSmallSub: 'Umschlag, Dokumente',
-    sMediumTitle: 'Mittel', sMediumSub: 'Bücher, Tragetasche',
-    sLargeTitle: 'Groß', sLargeSub: 'Karton, mehrere Teile',
     stepOf: (n: number) => `Schritt ${n} von 5`,
     continue: 'Weiter', back: 'Zurück',
     pickup: 'Abholung', dropoff: 'Zielort',
@@ -48,22 +66,41 @@ const tr = {
     dateLabel: 'Datum', timeLabel: 'Uhrzeit',
     when: 'Wann', asap: 'Sofort',
     priceBase: 'Grundpreis', priceDist: 'Entfernung', pricePeak: 'Stoßzeit', priceTotal: 'Gesamt',
+    priceStores: 'Läden', priceItems: 'Artikel',
   },
   en: {
-    s1Title: 'Pickup', s1Sub: 'Where should your item be picked up from?',
-    s2Title: 'Dropoff', s2Sub: 'Where should your item be delivered?',
-    s3Title: 'What are you sending?', s3Sub: 'Describe your item for the courier.',
+    // step 0
+    typeTitle: 'What would you like?', typeSub: 'Choose the type of order.',
+    shoppingTitle: 'Shopping + Delivery', shoppingDesc: 'Courier shops for you and delivers to your door',
+    deliveryTitle: 'Delivery only', deliveryDesc: 'Courier picks up your package and delivers it',
+    shoppingFrom: 'from €5.00', deliveryFrom: 'from €5.00',
+    // steps 1–2
+    s1TitleShopping: 'Store / Pickup', s1SubShopping: 'Which store should the courier go to?',
+    s1TitleDelivery: 'Pickup', s1SubDelivery: 'Where should your item be picked up from?',
+    s2Title: 'Dropoff', s2Sub: 'Where should it be delivered?',
+    // step 3 shopping
+    s3TitleShopping: 'Shopping order', s3SubShopping: 'What should be bought and where?',
+    shoppingListLabel: 'Shopping list', shoppingListPh: 'e.g. Milk 1L, Bread, 6 Eggs…',
+    storesLabel: 'Number of stores', store1: 'store', store2: 'stores', store3: 'stores',
+    itemsLabel: 'Number of items', itemsFew: 'few', itemsMed: 'moderate', itemsMany: 'many',
+    // step 3 delivery
+    s3TitleDelivery: 'What are we delivering?', s3SubDelivery: 'Describe your package for the courier.',
+    itemDescLabel: 'What are we delivering?', itemDescPh: 'e.g. "Laptop in a bag", "Documents"',
+    fragilLabel: 'Fragile?', fragilYes: 'Yes, handle with care', fragilNo: 'No',
+    sizeLabel: 'Package size',
+    sSmallTitle: 'Small', sSmallSub: 'Envelope, documents',
+    sMediumTitle: 'Medium', sMediumSub: 'Books, bag',
+    sLargeTitle: 'Large', sLargeSub: 'Box, multiple items',
+    // step 4
     s4Title: 'When?', s4Sub: 'Should delivery happen now or later?',
+    // step 5
     s5Title: 'Review order', s5Sub: 'Everything look right?',
+    orderTypeBadgeShopping: 'Shopping', orderTypeBadgeDelivery: 'Delivery',
     pickupLabel: 'Pickup address', dropoffLabel: 'Delivery address',
     orChoose: 'or choose quickly:',
     searchPh: 'Enter address…',
     noteLabel: 'Message for courier', notePh: 'e.g. "3rd floor, ring Schmidt"',
     optional: 'optional',
-    sizeLabel: 'Package size',
-    sSmallTitle: 'Small', sSmallSub: 'Envelope, documents',
-    sMediumTitle: 'Medium', sMediumSub: 'Books, bag',
-    sLargeTitle: 'Large', sLargeSub: 'Box, multiple items',
     stepOf: (n: number) => `Step ${n} of 5`,
     continue: 'Continue', back: 'Back',
     pickup: 'Pickup', dropoff: 'Dropoff',
@@ -73,6 +110,7 @@ const tr = {
     dateLabel: 'Date', timeLabel: 'Time',
     when: 'When', asap: 'ASAP',
     priceBase: 'Base price', priceDist: 'Distance', pricePeak: 'Peak hour', priceTotal: 'Total',
+    priceStores: 'Stores', priceItems: 'Items',
   },
 }
 
@@ -226,15 +264,28 @@ export default function CreateDeliveryPage() {
   const { lang } = useLang()
   const t = tr[lang]
 
-  const state = (location.state as { prefill?: { pickup: string; dropoff: string; description: string; size: 'S' | 'M' | 'L' } } | null)
+  const state = (location.state as {
+    prefill?: { pickup: string; dropoff: string; description: string; size: 'S' | 'M' | 'L' }
+    orderType?: 'shopping' | 'delivery'
+  } | null)
   const prefill = state?.prefill
+  const incomingOrderType = state?.orderType ?? null
 
-  const [step, setStep] = useState(prefill ? 5 : 1)
+  const [orderType, setOrderType] = useState<'shopping' | 'delivery' | null>(
+    prefill ? 'delivery' : incomingOrderType
+  )
+  const [itemDesc, setItemDesc] = useState(prefill?.description ?? '')
+  const [shoppingList, setShoppingList] = useState('')
+  const [isFragile, setIsFragile] = useState(false)
+  // Skip step 0 if type was already chosen on the previous screen
+  const [step, setStep] = useState(prefill ? 5 : (incomingOrderType ? 1 : 0))
   const [pickup, setPickup] = useState(prefill?.pickup ?? '')
   const [dropoff, setDropoff] = useState(prefill?.dropoff ?? '')
   const [pickupCoords, setPickupCoords] = useState<Coords | null>(null)
   const [dropoffCoords, setDropoffCoords] = useState<Coords | null>(null)
   const [size, setSize] = useState<'S' | 'M' | 'L'>(prefill?.size ?? 'M')
+  const [stores, setStores] = useState<1 | 2 | 3>(1)
+  const [itemRange, setItemRange] = useState<ItemRange>('1-5')
   const [note, setNote] = useState('')
   const [scheduleType, setScheduleType] = useState<'now' | 'later'>('now')
   const [scheduleDate, setScheduleDate] = useState('')
@@ -286,13 +337,15 @@ export default function CreateDeliveryPage() {
   }
 
   const canContinue =
-    step === 1 ? !!pickupCoords
+    step === 0 ? orderType !== null
+    : step === 1 ? !!pickupCoords
     : step === 2 ? !!dropoffCoords
+    : step === 3 ? (orderType === 'shopping' ? shoppingList.trim().length > 2 : itemDesc.trim().length > 2)
     : step === 4 ? scheduleType === 'now' || (scheduleDate !== '' && scheduleTime !== '')
     : true
 
   const goNext = () => { if (step < 5) setStep(s => s + 1); else setStep(6) }
-  const goBack = () => { if (step > 1) setStep(s => s - 1); else navigate('/') }
+  const goBack = () => { if (step > 0) setStep(s => s - 1); else navigate('/') }
 
   if (step === 6) {
     return <ComingSoonSheet onBack={() => setStep(5)} showFeedback feedbackPage="create-delivery" />
@@ -342,6 +395,67 @@ export default function CreateDeliveryPage() {
     </div>
   )
 
+  // Step 0 — order type selection
+  if (step === 0) {
+    return (
+      <div className="min-h-screen bg-white flex flex-col">
+        {navbar}
+        <div className="flex-1 flex flex-col items-center justify-center px-6 py-10">
+          <div className="w-full max-w-md animate-fade-in-up">
+            <p className="text-xs font-semibold text-green-600 uppercase tracking-wider mb-2 text-center">{t.typeSub}</p>
+            <h1 className="text-3xl font-black text-gray-900 mb-8 text-center">{t.typeTitle}</h1>
+
+            <div className="space-y-3">
+              {([
+                {
+                  type: 'shopping' as const,
+                  emoji: '🛒',
+                  title: t.shoppingTitle,
+                  desc: t.shoppingDesc,
+                  from: t.shoppingFrom,
+                  color: '#15803d',
+                  bg: '#f0fdf4',
+                  border: '#bbf7d0',
+                },
+                {
+                  type: 'delivery' as const,
+                  emoji: '📦',
+                  title: t.deliveryTitle,
+                  desc: t.deliveryDesc,
+                  from: t.deliveryFrom,
+                  color: '#2563eb',
+                  bg: '#eff6ff',
+                  border: '#bfdbfe',
+                },
+              ]).map(opt => {
+                const selected = orderType === opt.type
+                return (
+                  <button
+                    key={opt.type}
+                    onClick={() => { setOrderType(opt.type); setTimeout(goNext, 160) }}
+                    className="w-full text-left p-5 rounded-2xl border-2 transition-all flex items-start gap-4"
+                    style={{
+                      borderColor: selected ? opt.color : '#e5e7eb',
+                      background: selected ? opt.bg : 'white',
+                      boxShadow: selected ? `0 0 0 3px ${opt.border}` : 'none',
+                    }}
+                  >
+                    <span className="text-3xl shrink-0 mt-0.5">{opt.emoji}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-black text-gray-900 text-base mb-0.5">{opt.title}</p>
+                      <p className="text-sm text-gray-400 leading-snug">{opt.desc}</p>
+                    </div>
+                    <span className="text-xs font-semibold shrink-0 mt-1" style={{ color: opt.color }}>{opt.from}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   // Steps 1 & 2 — split layout with map
   if (step === 1 || step === 2) {
     return (
@@ -352,8 +466,16 @@ export default function CreateDeliveryPage() {
             {stepBar}
             <div className="animate-fade-in-up flex-1 flex flex-col">
               <p className="text-xs font-semibold text-green-600 uppercase tracking-wider mb-1">{t.stepOf(step)}</p>
-              <h1 className="text-2xl font-black text-gray-900 mb-1">{step === 1 ? t.s1Title : t.s2Title}</h1>
-              <p className="text-gray-400 text-sm mb-5">{step === 1 ? t.s1Sub : t.s2Sub}</p>
+              <h1 className="text-2xl font-black text-gray-900 mb-1">
+                {step === 1
+                  ? (orderType === 'shopping' ? t.s1TitleShopping : t.s1TitleDelivery)
+                  : t.s2Title}
+              </h1>
+              <p className="text-gray-400 text-sm mb-5">
+                {step === 1
+                  ? (orderType === 'shopping' ? t.s1SubShopping : t.s1SubDelivery)
+                  : t.s2Sub}
+              </p>
 
               {step === 1 && (
                 <AddressField
@@ -416,11 +538,71 @@ export default function CreateDeliveryPage() {
       <div className="flex-1 flex flex-col px-6 max-w-lg mx-auto w-full pb-10 pt-8">
         {stepBar}
 
-        {step === 3 && (
+        {step === 3 && orderType === 'shopping' && (
           <div className="animate-fade-in-up">
             <p className="text-xs font-semibold text-green-600 uppercase tracking-wider mb-1">{t.stepOf(3)}</p>
-            <h1 className="text-3xl font-black text-gray-900 mb-2">{t.s3Title}</h1>
-            <p className="text-gray-400 text-sm mb-6">{t.s3Sub}</p>
+            <h1 className="text-3xl font-black text-gray-900 mb-2">{t.s3TitleShopping}</h1>
+            <p className="text-gray-400 text-sm mb-6">{t.s3SubShopping}</p>
+
+            <label className="block text-sm font-semibold text-gray-700 mb-1" htmlFor="shopping-list">
+              {t.shoppingListLabel}
+            </label>
+            <textarea id="shopping-list" value={shoppingList} onChange={e => setShoppingList(e.target.value)}
+              placeholder={t.shoppingListPh} rows={4}
+              className="w-full px-4 py-3 rounded-xl border-2 outline-none text-gray-900 placeholder-gray-300 text-sm font-medium bg-white transition-colors resize-none mb-5"
+              style={{ borderColor: shoppingList.trim().length > 2 ? '#16a34a' : '#e5e7eb' }} />
+
+            <p className="text-sm font-semibold text-gray-700 mb-3">{t.storesLabel}</p>
+            <div className="flex gap-2 mb-5">
+              {([1, 2, 3] as const).map(n => (
+                <button key={n} onClick={() => setStores(n)}
+                  className="flex-1 py-3 rounded-xl border-2 text-sm font-bold transition-all"
+                  style={{ borderColor: stores === n ? '#16a34a' : '#e5e7eb', background: stores === n ? '#f0fdf4' : 'white', color: stores === n ? '#15803d' : '#374151' }}>
+                  {n === 3 ? '3+' : n}
+                  <span className="block text-xs font-normal mt-0.5" style={{ color: stores === n ? '#16a34a' : '#9ca3af' }}>
+                    {n === 1 ? t.store1 : n === 2 ? t.store2 : t.store3}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            <p className="text-sm font-semibold text-gray-700 mb-3">{t.itemsLabel}</p>
+            <div className="flex gap-2 mb-5">
+              {(['1-5', '6-15', '16+'] as const).map(range => (
+                <button key={range} onClick={() => setItemRange(range)}
+                  className="flex-1 py-3 rounded-xl border-2 text-sm font-bold transition-all"
+                  style={{ borderColor: itemRange === range ? '#16a34a' : '#e5e7eb', background: itemRange === range ? '#f0fdf4' : 'white', color: itemRange === range ? '#15803d' : '#374151' }}>
+                  {range}
+                  <span className="block text-xs font-normal mt-0.5" style={{ color: itemRange === range ? '#16a34a' : '#9ca3af' }}>
+                    {range === '1-5' ? t.itemsFew : range === '6-15' ? t.itemsMed : t.itemsMany}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            <label className="block text-sm font-semibold text-gray-700 mb-1" htmlFor="courier-note">
+              {t.noteLabel} <span className="font-normal text-gray-400">({t.optional})</span>
+            </label>
+            <textarea id="courier-note" value={note} onChange={e => setNote(e.target.value)}
+              placeholder={t.notePh} rows={2}
+              className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-green-600 outline-none text-gray-900 placeholder-gray-300 text-sm font-medium bg-white transition-colors resize-none" />
+          </div>
+        )}
+
+        {step === 3 && orderType === 'delivery' && (
+          <div className="animate-fade-in-up">
+            <p className="text-xs font-semibold text-green-600 uppercase tracking-wider mb-1">{t.stepOf(3)}</p>
+            <h1 className="text-3xl font-black text-gray-900 mb-2">{t.s3TitleDelivery}</h1>
+            <p className="text-gray-400 text-sm mb-6">{t.s3SubDelivery}</p>
+
+            <label className="block text-sm font-semibold text-gray-700 mb-1" htmlFor="item-desc">
+              {t.itemDescLabel}
+            </label>
+            <textarea id="item-desc" value={itemDesc} onChange={e => setItemDesc(e.target.value)}
+              placeholder={t.itemDescPh} rows={3}
+              className="w-full px-4 py-3 rounded-xl border-2 outline-none text-gray-900 placeholder-gray-300 text-sm font-medium bg-white transition-colors resize-none mb-5"
+              style={{ borderColor: itemDesc.trim().length > 2 ? '#16a34a' : '#e5e7eb' }} />
+
             <p className="text-sm font-semibold text-gray-700 mb-3">{t.sizeLabel}</p>
             <div className="grid grid-cols-3 gap-2 mb-5">
               {(['S', 'M', 'L'] as const).map(s => {
@@ -440,6 +622,22 @@ export default function CreateDeliveryPage() {
                 )
               })}
             </div>
+
+            <p className="text-sm font-semibold text-gray-700 mb-3">{t.fragilLabel}</p>
+            <div className="flex gap-2 mb-5">
+              {([true, false] as const).map(val => (
+                <button key={String(val)} onClick={() => setIsFragile(val)}
+                  className="flex-1 py-3 rounded-xl border-2 text-sm font-semibold transition-all"
+                  style={{
+                    borderColor: isFragile === val ? (val ? '#f59e0b' : '#16a34a') : '#e5e7eb',
+                    background: isFragile === val ? (val ? '#fffbeb' : '#f0fdf4') : 'white',
+                    color: isFragile === val ? (val ? '#d97706' : '#15803d') : '#374151',
+                  }}>
+                  {val ? `⚠️ ${t.fragilYes}` : `✓ ${t.fragilNo}`}
+                </button>
+              ))}
+            </div>
+
             <label className="block text-sm font-semibold text-gray-700 mb-1" htmlFor="courier-note">
               {t.noteLabel} <span className="font-normal text-gray-400">({t.optional})</span>
             </label>
@@ -542,7 +740,11 @@ export default function CreateDeliveryPage() {
               </div>
             </div>
             {(() => {
-              const p = calculatePrice(pickup, dropoff, size, scheduleType, scheduleTime)
+              const p = calculatePrice(
+                pickup, dropoff, size, scheduleType, scheduleTime,
+                orderType === 'shopping' ? stores : 1,
+                orderType === 'shopping' ? itemRange : '1-5',
+              )
               return (
                 <div className="bg-white rounded-2xl border border-green-100 mb-3 overflow-hidden"
                   style={{ boxShadow: '0 0 0 2px rgba(22,163,74,0.1)' }}>
@@ -555,6 +757,18 @@ export default function CreateDeliveryPage() {
                       <span>{t.priceDist} (~{p.estimatedKm} km)</span>
                       <span>+ €{p.distanceSurcharge.toFixed(2)}</span>
                     </div>
+                    {p.storesSurcharge > 0 && (
+                      <div className="flex justify-between text-sm text-gray-500">
+                        <span>🏪 {t.priceStores} ({stores === 3 ? '3+' : stores})</span>
+                        <span>+ €{p.storesSurcharge.toFixed(2)}</span>
+                      </div>
+                    )}
+                    {p.itemsSurcharge > 0 && (
+                      <div className="flex justify-between text-sm text-gray-500">
+                        <span>📦 {t.priceItems} ({itemRange})</span>
+                        <span>+ €{p.itemsSurcharge.toFixed(2)}</span>
+                      </div>
+                    )}
                     {p.isPeak && (
                       <div className="flex justify-between text-sm text-amber-600">
                         <span>⚡ {t.pricePeak}</span>
