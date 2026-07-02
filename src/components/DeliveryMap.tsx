@@ -56,6 +56,8 @@ export default function DeliveryMap({
   const dropoffMarkerRef = useRef<L.Marker | null>(null)
   const routeLayerRef = useRef<L.Polyline | null>(null)
   const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null)
+  const onMapClickRef = useRef(onMapClick)
+  useEffect(() => { onMapClickRef.current = onMapClick }, [onMapClick])
 
   // Init map
   useEffect(() => {
@@ -90,7 +92,7 @@ export default function DeliveryMap({
         const parts = [d.address?.road, d.address?.house_number, d.address?.city ?? d.address?.town ?? d.address?.village]
           .filter(Boolean)
         const addr = parts.length ? parts.join(' ') : d.display_name?.split(',').slice(0, 2).join(',') ?? `${lat.toFixed(4)}, ${lng.toFixed(4)}`
-        onMapClick(lat, lng, addr)
+        onMapClickRef.current(lat, lng, addr)
       } catch {
         onMapClick(lat, lng, `${lat.toFixed(4)}, ${lng.toFixed(4)}`)
       }

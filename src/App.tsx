@@ -3,6 +3,8 @@ import { useEffect } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import PageTransition from './components/PageTransition'
 import { getSession } from './lib/session'
+import { getTextSize, applyTextSize } from './lib/textSize'
+import TextSizeToggle from './components/TextSizeToggle'
 import LoginPage from './pages/LoginPage'
 import CourierLoginPage from './pages/CourierLoginPage'
 import PartnerPage from './pages/PartnerPage'
@@ -60,9 +62,15 @@ function AnimatedRoutes() {
 
 export default function App() {
   useEffect(() => {
+    applyTextSize(getTextSize())
     const { mode } = getSession()
-    document.documentElement.style.fontSize = mode === 'easy' ? '115%' : '100%'
+    if (mode === 'easy') document.documentElement.style.fontSize = '115%'
   }, [])
 
-  return <AnimatedRoutes />
+  return (
+    <>
+      <AnimatedRoutes />
+      <TextSizeToggle />
+    </>
+  )
 }

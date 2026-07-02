@@ -276,6 +276,7 @@ export default function CreateDeliveryPage() {
   const state = (location.state as {
     prefill?: { pickup: string; dropoff: string; description: string; size: 'S' | 'M' | 'L' }
     orderType?: 'shopping' | 'delivery'
+    fromAI?: boolean
   } | null)
   const prefill = state?.prefill
   const incomingOrderType = state?.orderType ?? null
@@ -356,7 +357,10 @@ export default function CreateDeliveryPage() {
     : true
 
   const goNext = () => { if (step < 5) setStep(s => s + 1); else setStep(6) }
-  const goBack = () => { if (step > 0) setStep(s => s - 1); else navigate('/') }
+  const goBack = () => {
+    if (state?.fromAI && step === 1) { navigate('/easy-order'); return }
+    if (step > 0) setStep(s => s - 1); else navigate('/')
+  }
 
   if (step === 6) {
     return <ComingSoonSheet onBack={() => setStep(5)} showFeedback feedbackPage="create-delivery" />
@@ -812,13 +816,25 @@ export default function CreateDeliveryPage() {
                   <div className="w-3 h-3 rounded-full bg-blue-600" />
                 </div>
                 <div className="flex flex-col justify-between flex-1 gap-3">
-                  <div>
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-0.5">{t.pickup}</p>
-                    <p className="text-sm font-medium text-gray-900">{pickup}</p>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-0.5">{t.pickup}</p>
+                      <p className="text-sm font-medium text-gray-900 leading-snug">{pickup}</p>
+                    </div>
+                    <button onClick={() => setStep(1)}
+                      className="shrink-0 text-xs font-semibold text-green-600 hover:text-green-700 hover:underline transition-colors mt-0.5">
+                      {lang === 'de' ? 'Ändern' : 'Edit'}
+                    </button>
                   </div>
-                  <div>
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-0.5">{t.dropoff}</p>
-                    <p className="text-sm font-medium text-gray-900">{dropoff}</p>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-0.5">{t.dropoff}</p>
+                      <p className="text-sm font-medium text-gray-900 leading-snug">{dropoff}</p>
+                    </div>
+                    <button onClick={() => setStep(2)}
+                      className="shrink-0 text-xs font-semibold text-green-600 hover:text-green-700 hover:underline transition-colors mt-0.5">
+                      {lang === 'de' ? 'Ändern' : 'Edit'}
+                    </button>
                   </div>
                 </div>
               </div>

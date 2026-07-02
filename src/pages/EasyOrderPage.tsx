@@ -140,6 +140,7 @@ export default function EasyOrderPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [isRecording, setIsRecording] = useState(false)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [voiceError, setVoiceError] = useState(false)
   const [conversationId, setConversationId] = useState<string | null>(null)
   const [currentItems, setCurrentItems] = useState<OrderItem[] | null>(null)
   const [savedTemplate, setSavedTemplate] = useState<OrderItem[] | null>(null)
@@ -150,9 +151,16 @@ export default function EasyOrderPage() {
 
   useEffect(() => { setSavedTemplate(loadTemplate()) }, [])
 
+  const [currentPickup, setCurrentPickup] = useState<string | null>(null)
+  const [currentDropoff, setCurrentDropoff] = useState<string | null>(null)
+
   useEffect(() => {
     const last = messages[messages.length - 1]
-    if (last?.order) setCurrentItems(parseItems(last.order.description))
+    if (last?.order) {
+      setCurrentItems(parseItems(last.order.description))
+      setCurrentPickup(last.order.pickup)
+      setCurrentDropoff(last.order.dropoff)
+    }
   }, [messages])
 
   // Create a conversation record on mount
@@ -235,7 +243,7 @@ export default function EasyOrderPage() {
     const win = window as unknown as { SpeechRecognition?: new () => SR; webkitSpeechRecognition?: new () => SR }
     const SpeechRecognitionAPI = win.SpeechRecognition ?? win.webkitSpeechRecognition
 
-    if (!SpeechRecognitionAPI) { alert(t.voiceNotSupported); return }
+    if (!SpeechRecognitionAPI) { setVoiceError(true); setTimeout(() => setVoiceError(false), 3500); return }
 
     if (isRecording) {
       recognitionRef.current?.stop()
@@ -268,7 +276,7 @@ export default function EasyOrderPage() {
     const items = currentItems ?? parseItems(order.description)
     saveTemplate(items)
     const description = items.map(it => `${it.qty > 1 ? `${it.qty}x ` : ''}${it.name}`).join(', ')
-    navigate('/create-delivery', { state: { firstName, prefill: { ...order, description }, conversationId } })
+    navigate('/create-delivery', { state: { firstName, fromAI: true, prefill: { ...order, pickup: currentPickup ?? order.pickup, dropoff: currentDropoff ?? order.dropoff, description }, conversationId } })
   }
 
   const updateItem = (id: string, patch: Partial<OrderItem>) =>
@@ -324,12 +332,30 @@ export default function EasyOrderPage() {
                       </div>
                       <div className="flex flex-col gap-3 flex-1">
                         <div>
-                          <p className="text-sm font-semibold text-gray-400 uppercase tracking-wide">{t.pickup}</p>
-                          <p className="text-lg font-semibold text-gray-900 leading-tight">{msg.order.pickup}</p>
+                          <p className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-1">{t.pickup}</p>
+                          {i === messages.length - 1 ? (
+                            <input
+                              value={currentPickup ?? msg.order.pickup}
+                              onChange={e => setCurrentPickup(e.target.value)}
+                              className="w-full text-base font-semibold text-gray-900 bg-transparent border-b-2 outline-none py-0.5 transition-colors"
+                              style={{ borderColor: (currentPickup ?? msg.order.pickup) ? '#16a34a' : '#f59e0b' }}
+                            />
+                          ) : (
+                            <p className="text-base font-semibold text-gray-900 leading-tight">{msg.order.pickup}</p>
+                          )}
                         </div>
                         <div>
-                          <p className="text-sm font-semibold text-gray-400 uppercase tracking-wide">{t.dropoff}</p>
-                          <p className="text-lg font-semibold text-gray-900 leading-tight">{msg.order.dropoff}</p>
+                          <p className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-1">{t.dropoff}</p>
+                          {i === messages.length - 1 ? (
+                            <input
+                              value={currentDropoff ?? msg.order.dropoff}
+                              onChange={e => setCurrentDropoff(e.target.value)}
+                              className="w-full text-base font-semibold text-gray-900 bg-transparent border-b-2 outline-none py-0.5 transition-colors"
+                              style={{ borderColor: (currentDropoff ?? msg.order.dropoff) ? '#16a34a' : '#f59e0b' }}
+                            />
+                          ) : (
+                            <p className="text-base font-semibold text-gray-900 leading-tight">{msg.order.dropoff}</p>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -392,6 +418,19 @@ export default function EasyOrderPage() {
         <div ref={bottomRef} />
       </div>
 
+
+      {/* Voice not supported toast */}
+      {voiceError && (
+        <div className="shrink-0 max-w-xl mx-auto w-full px-5 pb-2">
+          <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium"
+            style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }}>
+            <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16" className="shrink-0">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd"/>
+            </svg>
+            {t.voiceNotSupported}
+          </div>
+        </div>
+      )}
 
       {/* Input area */}
       <div className="shrink-0 bg-white border-t border-gray-100 px-5 py-4 max-w-xl mx-auto w-full">
