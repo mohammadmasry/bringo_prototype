@@ -340,7 +340,7 @@ export default function CreateDeliveryPage() {
     step === 0 ? orderType !== null
     : step === 1 ? !!pickupCoords
     : step === 2 ? !!dropoffCoords
-    : step === 3 ? (orderType === 'shopping' ? shoppingList.trim().length > 2 : itemDesc.trim().length > 2)
+    : step === 3 ? (orderType === 'shopping' ? shoppingList.trim().length > 2 : true)
     : step === 4 ? scheduleType === 'now' || (scheduleDate !== '' && scheduleTime !== '')
     : true
 
@@ -595,14 +595,6 @@ export default function CreateDeliveryPage() {
             <h1 className="text-3xl font-black text-gray-900 mb-2">{t.s3TitleDelivery}</h1>
             <p className="text-gray-400 text-sm mb-6">{t.s3SubDelivery}</p>
 
-            <label className="block text-sm font-semibold text-gray-700 mb-1" htmlFor="item-desc">
-              {t.itemDescLabel}
-            </label>
-            <textarea id="item-desc" value={itemDesc} onChange={e => setItemDesc(e.target.value)}
-              placeholder={t.itemDescPh} rows={3}
-              className="w-full px-4 py-3 rounded-xl border-2 outline-none text-gray-900 placeholder-gray-300 text-sm font-medium bg-white transition-colors resize-none mb-5"
-              style={{ borderColor: itemDesc.trim().length > 2 ? '#16a34a' : '#e5e7eb' }} />
-
             <p className="text-sm font-semibold text-gray-700 mb-3">{t.sizeLabel}</p>
             <div className="grid grid-cols-3 gap-2 mb-5">
               {(['S', 'M', 'L'] as const).map(s => {
@@ -637,6 +629,14 @@ export default function CreateDeliveryPage() {
                 </button>
               ))}
             </div>
+
+            <label className="block text-sm font-semibold text-gray-700 mb-1" htmlFor="item-desc">
+              {t.itemDescLabel} <span className="font-normal text-gray-400">({t.optional})</span>
+            </label>
+            <textarea id="item-desc" value={itemDesc} onChange={e => setItemDesc(e.target.value)}
+              placeholder={t.itemDescPh} rows={3}
+              className="w-full px-4 py-3 rounded-xl border-2 outline-none text-gray-900 placeholder-gray-300 text-sm font-medium bg-white transition-colors resize-none mb-5"
+              style={{ borderColor: itemDesc.trim().length > 2 ? '#16a34a' : '#e5e7eb' }} />
 
             <label className="block text-sm font-semibold text-gray-700 mb-1" htmlFor="courier-note">
               {t.noteLabel} <span className="font-normal text-gray-400">({t.optional})</span>
