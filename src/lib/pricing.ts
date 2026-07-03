@@ -11,7 +11,7 @@ export interface PriceBreakdown {
   isExpress: boolean
 }
 
-export const EXPRESS_SURCHARGE = 2.00
+export const EXPRESS_SURCHARGE = 10.00
 
 export type ItemRange = '1-5' | '6-15' | '16+'
 
