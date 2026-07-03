@@ -5,9 +5,10 @@ import { clearSession } from '../lib/session'
 import { api } from '../lib/api'
 import { logToSheets } from '../lib/sheets'
 import ComingSoonSheet from '../components/ComingSoonSheet'
+import { applyTextSize, getTextSize, type TextSize } from '../lib/textSize'
+import { useLang } from '../hooks/useLang'
 
-type SurveyLang = 'en' | 'de'
-type TextSize = 'normal' | 'large' | 'xl'
+
 
 const surveyQuestions = {
   en: [
@@ -155,8 +156,8 @@ const surveyQuestions = {
 function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => void }) {
   const navigate = useNavigate()
   const [step, setStep] = useState(0)
-  const [surveyLang, setSurveyLang] = useState<SurveyLang>('de')
-  const [textSize, setTextSize] = useState<TextSize>('large')
+  const { lang: surveyLang, setLang: setSurveyLang } = useLang()
+  const [textSize, setTextSize] = useState<TextSize>(() => getTextSize())
   const [questionIndex, setQuestionIndex] = useState(0)
   const [answers, setAnswers] = useState<Record<number, string | string[]>>({})
   const [comment, setComment] = useState('')
@@ -248,7 +249,7 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
         />
 
         <div className="relative z-10">
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black leading-tight max-w-md" style={{ color: 'rgba(255,255,255,0.82)' }}>
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-black leading-snug max-w-md" style={{ color: 'rgba(255,255,255,0.82)' }}>
             {surveyLang === 'de' ? (
               <>
                 Bringo unterstützt Menschen bei{' '}
@@ -471,7 +472,7 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
               {(['normal', 'large', 'xl'] as TextSize[]).map((size) => (
                 <button
                   key={size}
-                  onClick={() => setTextSize(size)}
+                  onClick={() => { setTextSize(size); applyTextSize(size) }}
                   aria-pressed={textSize === size}
                   className={`w-full border rounded-2xl p-5 text-left transition ${
                     textSize === size ? 'border-green-600 bg-green-50' : 'border-gray-200 hover:bg-green-50'
@@ -676,12 +677,12 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
               </button>
 
               <p className="text-center text-sm text-gray-400 pt-1">
-                {surveyLang === 'de' ? 'Oder bestellen Sie mit unserem ' : 'Or order with our '}
+                {surveyLang === 'de' ? 'Oder mit unserem ' : 'Or use our '}
                 <button
                   onClick={() => navigate('/easy-order')}
-                  className="text-green-600 font-semibold hover:text-green-700 hover:underline transition-colors"
+                  className="text-green-600 hover:text-green-700 hover:underline transition-colors font-medium"
                 >
-                  {surveyLang === 'de' ? '✨ KI-Assistenten' : '✨ AI assistant'}
+                  {surveyLang === 'de' ? 'KI-Assistenten' : 'AI assistant'}
                 </button>
               </p>
             </div>
