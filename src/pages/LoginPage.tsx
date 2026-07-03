@@ -72,7 +72,14 @@ const surveyQuestions = {
       question: 'I think a reasonable price to pay for a delivery is:',
       multi: false,
       options: [],
-      slider: { min: 1, max: 25, step: 0.5, default: 7, unit: '€' },
+      slider: { min: 3, max: 25, step: 0.5, default: 7, unit: '€' },
+    },
+    {
+      emoji: '🛍️',
+      question: 'I think a reasonable price for shopping + delivery is:',
+      multi: false,
+      options: [],
+      slider: { min: 7, max: 35, step: 0.5, default: 12, unit: '€' },
     },
     {
       emoji: '💳',
@@ -156,7 +163,14 @@ const surveyQuestions = {
       question: 'Ich finde für eine Lieferung angemessen zu zahlen:',
       multi: false,
       options: [],
-      slider: { min: 1, max: 25, step: 0.5, default: 7, unit: '€' },
+      slider: { min: 3, max: 25, step: 0.5, default: 7, unit: '€' },
+    },
+    {
+      emoji: '🛍️',
+      question: 'Ich finde für Einkauf + Lieferung angemessen zu zahlen:',
+      multi: false,
+      options: [],
+      slider: { min: 7, max: 35, step: 0.5, default: 12, unit: '€' },
     },
     {
       emoji: '💳',

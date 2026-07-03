@@ -746,7 +746,7 @@ export default function CreateDeliveryPage() {
           const allowedDays = getAllowedDays(effectivePostcode)
           const zoneName = getZoneName(effectivePostcode)
           const dayOptions = [
-            { key: 'express', label: t.expressLabel, sub: t.expressSub, iso: null },
+            ...(effectivePostcode === '84347' ? [{ key: 'express', label: t.expressLabel, sub: t.expressSub, iso: null }] : []),
             ...Array.from({ length: 7 }, (_, i) => {
               const d = new Date(Date.now() + i * 86400000)
               const iso = d.toISOString().split('T')[0]
