@@ -27,11 +27,11 @@ Orders can be placed for "now" (immediate) or a specific 2-hour delivery window.
 Each slot applies a price modifier to the base price:
 - 08:00–10:00 (id: s0810): normal price
 - 10:00–12:00 (id: s1012): normal price
-- 12:00–14:00 (id: s1214): +15% surcharge — lunch rush (Stoßzeit)
+- 12:00–14:00 (id: s1214): normal price
 - 14:00–16:00 (id: s1416): −10% discount — cheapest option (günstig)
 - 16:00–18:00 (id: s1618): −5% discount — affordable
-- 18:00–20:00 (id: s1820): +15% surcharge — evening rush (Stoßzeit)
-- 20:00–22:00 (id: s2022): normal price
+- 18:00–20:00 (id: s1820): normal price
+- 20:00–22:00 (id: s2022): +15% surcharge — late evening (Stoßzeit)
 If a customer asks for the cheapest time → suggest 14:00–16:00 (−10%).
 If a customer asks for the fastest/soonest → suggest "now" or the next available slot.
 

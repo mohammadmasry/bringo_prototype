@@ -28,11 +28,11 @@ export interface TimeSlot {
 const BASE_SLOTS: TimeSlot[] = [
   { id: 's0810', start: 8,  end: 10, label: '08:00 – 10:00', priceMod: 0,     tag: 'normal',    tagLabel: '' },
   { id: 's1012', start: 10, end: 12, label: '10:00 – 12:00', priceMod: 0,     tag: 'normal',    tagLabel: '' },
-  { id: 's1214', start: 12, end: 14, label: '12:00 – 14:00', priceMod: 0.15,  tag: 'surcharge', tagLabel: '+15 %' },
+  { id: 's1214', start: 12, end: 14, label: '12:00 – 14:00', priceMod: 0,     tag: 'normal',    tagLabel: '' },
   { id: 's1416', start: 14, end: 16, label: '14:00 – 16:00', priceMod: -0.10, tag: 'discount',  tagLabel: '−10 %' },
   { id: 's1618', start: 16, end: 18, label: '16:00 – 18:00', priceMod: -0.05, tag: 'discount',  tagLabel: '−5 %' },
-  { id: 's1820', start: 18, end: 20, label: '18:00 – 20:00', priceMod: 0.15,  tag: 'surcharge', tagLabel: '+15 %' },
-  { id: 's2022', start: 20, end: 22, label: '20:00 – 22:00', priceMod: 0,     tag: 'normal',    tagLabel: '' },
+  { id: 's1820', start: 18, end: 20, label: '18:00 – 20:00', priceMod: 0,     tag: 'normal',    tagLabel: '' },
+  { id: 's2022', start: 20, end: 22, label: '20:00 – 22:00', priceMod: 0.15,  tag: 'surcharge', tagLabel: '+15 %' },
 ]
 
 export function getTimeSlots(dateIso: string): TimeSlot[] {
