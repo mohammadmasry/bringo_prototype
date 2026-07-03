@@ -332,7 +332,7 @@ export default function CreateDeliveryPage() {
           `https://photon.komoot.io/api/?q=${encodeURIComponent(dropoff)}&limit=6&bbox=12.6,48.2,13.2,48.6&lang=${lang}`,
         )
         const data = await r.json()
-        setDropoffSugs((data.features ?? []).map(photonToNomResult))
+        setDropoffSugs((data.features ?? []).map(photonToNomResult).filter((x: NomResult | null): x is NomResult => x !== null))
       } catch { setDropoffSugs([]) }
     }, 300)
   }, [dropoff])
