@@ -10,7 +10,7 @@ interface Props {
   pickupCoords: Coords | null
   dropoffCoords: Coords | null
   activePin: 'pickup' | 'dropoff'
-  onMapClick: (lat: number, lon: number, address: string) => void
+  onMapClick: (lat: number, lon: number, address: string, hasHouseNum: boolean, postcode?: string) => void
   pickupAddress?: string
   dropoffAddress?: string
   lang: 'de' | 'en'
@@ -89,12 +89,14 @@ export default function DeliveryMap({
           { headers: { 'Accept-Language': lang } }
         )
         const d = await res.json()
-        const parts = [d.address?.road, d.address?.house_number, d.address?.city ?? d.address?.town ?? d.address?.village]
+        const houseNum = d.address?.house_number
+        const road = d.address?.road
+        const parts = [road, houseNum, d.address?.city ?? d.address?.town ?? d.address?.village]
           .filter(Boolean)
         const addr = parts.length ? parts.join(' ') : d.display_name?.split(',').slice(0, 2).join(',') ?? `${lat.toFixed(4)}, ${lng.toFixed(4)}`
-        onMapClickRef.current(lat, lng, addr)
+        onMapClickRef.current(lat, lng, addr, !!houseNum, d.address?.postcode)
       } catch {
-        onMapClick(lat, lng, `${lat.toFixed(4)}, ${lng.toFixed(4)}`)
+        onMapClick(lat, lng, `${lat.toFixed(4)}, ${lng.toFixed(4)}`, false)
       }
     })
 

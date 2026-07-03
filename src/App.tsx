@@ -1,4 +1,4 @@
-import { Routes, Route, useLocation } from 'react-router-dom'
+import { Routes, Route, useLocation, useNavigate } from 'react-router-dom'
 import { useEffect } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import PageTransition from './components/PageTransition'
@@ -22,10 +22,33 @@ import CourierActiveOrderPage from './pages/CourierActiveOrderPage'
 import PrototypeDashboard from './pages/PrototypeDashboard'
 import ProfitLossCalculator from './pages/ProfitLossCalculator.tsx'
 
+const LAST_PATH_KEY = 'bringo-last-path'
+const NO_RESTORE = new Set(['/', '/otp', '/register'])
+
+function RouteMemory() {
+  const location = useLocation()
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    const saved = localStorage.getItem(LAST_PATH_KEY)
+    if (saved && !NO_RESTORE.has(saved) && location.pathname === '/') {
+      navigate(saved, { replace: true })
+    }
+  }, [])
+
+  useEffect(() => {
+    localStorage.setItem(LAST_PATH_KEY, location.pathname)
+  }, [location.pathname])
+
+  return null
+}
+
 function AnimatedRoutes() {
   const location = useLocation()
 
   return (
+    <>
+    <RouteMemory />
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
         {/* ── Public landing ── */}
@@ -57,6 +80,7 @@ function AnimatedRoutes() {
         <Route path="/calculator" element={<ProfitLossCalculator />} />
       </Routes>
     </AnimatePresence>
+    </>
   )
 }
 

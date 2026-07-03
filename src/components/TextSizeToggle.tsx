@@ -16,7 +16,7 @@ export default function TextSizeToggle() {
     <button
       onClick={cycle}
       title="Textgröße ändern / Change text size"
-      className="fixed bottom-6 right-4 z-[9999] flex items-center gap-1.5 px-4 py-2.5 rounded-2xl transition-all"
+      className="fixed bottom-6 right-16 z-[9999] flex items-center gap-1.5 px-4 py-2.5 rounded-2xl transition-all"
       style={{
         background: size === 'normal' ? 'rgba(255,255,255,0.92)' : '#f0fdf4',
         backdropFilter: 'blur(10px)',
