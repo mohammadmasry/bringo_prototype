@@ -15,11 +15,42 @@ const PICKUP_PRESETS = [
 ]
 
 const DROPOFF_PRESETS = [
-  { label: 'Stadtplatz 12, 84347 Pfarrkirchen', lat: 48.4371, lon: 12.9487 },
-  { label: 'Ludwigstraße 8, 84347 Pfarrkirchen', lat: 48.4358, lon: 12.9466 },
-  { label: 'Ringstraße 44, 84347 Pfarrkirchen', lat: 48.4336, lon: 12.9503 },
-  { label: 'Kirchgasse 5, 84347 Pfarrkirchen', lat: 48.4364, lon: 12.9473 },
+  { label: 'Stadtplatz 12, 84347 Pfarrkirchen', lat: 48.4371, lon: 12.9487, postcode: '84347' },
+  { label: 'Ludwigstraße 8, 84347 Pfarrkirchen', lat: 48.4358, lon: 12.9466, postcode: '84347' },
+  { label: 'Ringstraße 44, 84347 Pfarrkirchen', lat: 48.4336, lon: 12.9503, postcode: '84347' },
+  { label: 'Kirchgasse 5, 84347 Pfarrkirchen', lat: 48.4364, lon: 12.9473, postcode: '84347' },
 ]
+
+// 0=Sun 1=Mon 2=Tue 3=Wed 4=Thu 5=Fri 6=Sat
+const DELIVERY_ZONES = [
+  { name: 'Pfarrkirchen',             zips: ['84347'],          days: [0,1,2,3,4,5,6] },
+  { name: 'Bad Birnbach',             zips: ['84364'],          days: [1,3,6] },
+  { name: 'Eggenfelden / Postmünster', zips: ['84307','84389'], days: [2,4,0] },
+]
+
+const CITY_ZONE_KEYWORDS: { words: string[]; zip: string }[] = [
+  { words: ['bad birnbach', 'birnbach'],              zip: '84364' },
+  { words: ['eggenfelden'],                           zip: '84307' },
+  { words: ['postmünster', 'postmuenster'],           zip: '84389' },
+  { words: ['pfarrkirchen'],                          zip: '84347' },
+]
+
+function detectPostcode(address: string): string | null {
+  const lower = address.toLowerCase()
+  const explicit = address.match(/\b(\d{5})\b/)
+  if (explicit) return explicit[1]
+  return CITY_ZONE_KEYWORDS.find(e => e.words.some(w => lower.includes(w)))?.zip ?? null
+}
+
+function getAllowedDays(postcode: string | null): number[] | null {
+  if (!postcode) return null
+  return DELIVERY_ZONES.find(z => z.zips.includes(postcode))?.days ?? null
+}
+
+function getZoneName(postcode: string | null): string | null {
+  if (!postcode) return null
+  return DELIVERY_ZONES.find(z => z.zips.includes(postcode))?.name ?? null
+}
 
 
 const tr = {
@@ -56,6 +87,7 @@ const tr = {
     searchPh: 'Adresse eingeben…',
     noteLabel: 'Nachricht an den Kurier', notePh: 'z.B. "3. OG, Klingel Schmidt"',
     optional: 'optional',
+    houseNumLabel: 'Hausnummer', houseNumPh: 'z.B. 12a',
     stepOf: (n: number) => `Schritt ${n} von 5`,
     continue: 'Weiter', back: 'Zurück',
     pickup: 'Abholung', dropoff: 'Zielort',
@@ -105,6 +137,7 @@ const tr = {
     searchPh: 'Enter address…',
     noteLabel: 'Message for courier', notePh: 'e.g. "3rd floor, ring Schmidt"',
     optional: 'optional',
+    houseNumLabel: 'House number', houseNumPh: 'e.g. 12a',
     stepOf: (n: number) => `Step ${n} of 5`,
     continue: 'Continue', back: 'Back',
     pickup: 'Pickup', dropoff: 'Dropoff',
@@ -148,14 +181,15 @@ interface NomResult {
 function formatNom(r: NomResult): string {
   const p = r._photon
   if (p) {
-    const street = p.street && p.housenumber ? `${p.street} ${p.housenumber}` : (p.street ?? p.name ?? '')
-    const parts = [street, p.city, p.postcode].filter(Boolean)
+    const street = p.street && p.housenumber ? `${p.street} ${p.housenumber}` : (p.street ?? '')
+    const namePart = p.name && p.name !== street ? p.name : null
+    const parts = [namePart, street || null, p.city, p.postcode].filter(Boolean)
     return parts.length ? parts.join(', ') : r.display_name
   }
   return r.display_name
 }
 
-const PHOTON_GENERAL_TYPES = new Set(['city', 'district', 'county', 'state', 'country'])
+const PHOTON_GENERAL_TYPES = new Set(['city', 'district', 'county', 'state', 'country', 'locality', 'municipality'])
 
 function photonToNomResult(f: { geometry: { coordinates: [number, number] }; properties: Record<string, string> }): NomResult | null {
   const p = f.properties
@@ -182,8 +216,8 @@ interface AddressFieldProps {
   placeholder: string
   label: string
   suggestions: NomResult[]
-  onSelect: (label: string, coords: Coords) => void
-  presets: typeof PICKUP_PRESETS
+  onSelect: (label: string, coords: Coords, hasHouseNum?: boolean, postcode?: string) => void
+  presets: { label: string; lat: number; lon: number; postcode?: string }[]
   coordsSet: boolean
   orChoose: string
 }
@@ -227,7 +261,7 @@ function AddressField({
             {suggestions.map(r => (
               <button
                 key={r.place_id}
-                onMouseDown={() => onSelect(formatNom(r), { lat: parseFloat(r.lat), lon: parseFloat(r.lon) })}
+                onMouseDown={() => onSelect(formatNom(r), { lat: parseFloat(r.lat), lon: parseFloat(r.lon) }, !!r._photon?.housenumber, r._photon?.postcode)}
                 className="w-full text-left px-4 py-3 text-sm hover:bg-green-50 transition-colors flex items-start gap-3 border-b border-gray-50 last:border-0"
               >
                 <svg className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -246,7 +280,7 @@ function AddressField({
         {presets.map(p => (
           <button
             key={p.label}
-            onClick={() => onSelect(p.label, { lat: p.lat, lon: p.lon })}
+            onClick={() => onSelect(p.label, { lat: p.lat, lon: p.lon }, true, p.postcode)}
             className="w-full text-left px-3.5 py-2.5 rounded-xl border-2 text-sm font-medium transition-all flex items-center gap-2.5"
             style={{
               borderColor: value === p.label ? '#16a34a' : '#f3f4f6',
@@ -302,6 +336,11 @@ export default function CreateDeliveryPage() {
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(
     (state as { slotId?: string } | null)?.slotId ?? null
   )
+  const [pickupHouseNum, setPickupHouseNum] = useState('')
+  const [dropoffHouseNum, setDropoffHouseNum] = useState('')
+  const [pickupHasHouseNum, setPickupHasHouseNum] = useState(false)
+  const [dropoffHasHouseNum, setDropoffHasHouseNum] = useState(false)
+  const [dropoffPostcode, setDropoffPostcode] = useState<string | null>(null)
   const [pickupSugs, setPickupSugs] = useState<NomResult[]>([])
   const [dropoffSugs, setDropoffSugs] = useState<NomResult[]>([])
   const [pickupFocused, setPickupFocused] = useState(false)
@@ -337,23 +376,27 @@ export default function CreateDeliveryPage() {
     }, 300)
   }, [dropoff])
 
-  const selectPickup = (label: string, coords: Coords) => {
+  const selectPickup = (label: string, coords: Coords, hasHouseNum = false) => {
     setPickup(label); setPickupCoords(coords); setPickupSugs([])
+    setPickupHasHouseNum(hasHouseNum); setPickupHouseNum('')
   }
-  const selectDropoff = (label: string, coords: Coords) => {
+  const selectDropoff = (label: string, coords: Coords, hasHouseNum = false, postcode?: string) => {
     setDropoff(label); setDropoffCoords(coords); setDropoffSugs([])
+    setDropoffHasHouseNum(hasHouseNum); setDropoffHouseNum('')
+    setDropoffPostcode(postcode ?? null)
   }
-  const handleMapClick = (lat: number, lon: number, address: string) => {
-    if (step === 1) selectPickup(address, { lat, lon })
-    else if (step === 2) selectDropoff(address, { lat, lon })
+  const handleMapClick = (lat: number, lon: number, address: string, hasHouseNum: boolean, postcode?: string) => {
+    if (step === 1) selectPickup(address, { lat, lon }, hasHouseNum)
+    else if (step === 2) selectDropoff(address, { lat, lon }, hasHouseNum, postcode)
   }
 
   const canContinue =
     step === 0 ? orderType !== null
-    : step === 1 ? !!pickupCoords
-    : step === 2 ? !!dropoffCoords
+    : step === 1 ? (pickupCoords ? (pickupHasHouseNum || pickupHouseNum.trim().length > 0) : pickup.trim().length > 2)
+    : step === 2 ? (dropoffCoords ? (dropoffHasHouseNum || dropoffHouseNum.trim().length > 0) : dropoff.trim().length > 2)
     : step === 3 ? (orderType === 'shopping' ? shoppingList.trim().length > 2 : true)
     : step === 4 ? scheduleType === 'express' || selectedSlotId !== null
+    : step === 5 ? pickup.trim().length > 0 && dropoff.trim().length > 0
     : true
 
   const goNext = () => { if (step < 5) setStep(s => s + 1); else setStep(6) }
@@ -493,37 +536,73 @@ export default function CreateDeliveryPage() {
               </p>
 
               {step === 1 && (
-                <AddressField
-                  id="pickup-input"
-                  value={pickup}
-                  onChange={v => { setPickup(v); if (pickupCoords) setPickupCoords(null) }}
-                  onFocus={() => setPickupFocused(true)}
-                  onBlur={() => setPickupFocused(false)}
-                  placeholder={t.searchPh}
-                  label={t.pickupLabel}
-                  suggestions={pickupFocused ? pickupSugs : []}
-                  onSelect={selectPickup}
-                  presets={PICKUP_PRESETS}
-                  coordsSet={!!pickupCoords}
-                  orChoose={t.orChoose}
-                />
+                <>
+                  <AddressField
+                    id="pickup-input"
+                    value={pickup}
+                    onChange={v => { setPickup(v); if (pickupCoords) setPickupCoords(null) }}
+                    onFocus={() => setPickupFocused(true)}
+                    onBlur={() => setPickupFocused(false)}
+                    placeholder={t.searchPh}
+                    label={t.pickupLabel}
+                    suggestions={pickupFocused ? pickupSugs : []}
+                    onSelect={selectPickup}
+                    presets={PICKUP_PRESETS}
+                    coordsSet={!!pickupCoords}
+                    orChoose={t.orChoose}
+                  />
+                  {pickupCoords && !pickupHasHouseNum && (
+                    <div className="mt-4">
+                      <label className="block text-xs font-semibold text-gray-500 mb-1.5" htmlFor="pickup-housenum">
+                        {t.houseNumLabel} <span className="font-normal text-red-400">*</span>
+                      </label>
+                      <input
+                        id="pickup-housenum"
+                        type="text"
+                        value={pickupHouseNum}
+                        onChange={e => setPickupHouseNum(e.target.value)}
+                        placeholder={t.houseNumPh}
+                        className="w-full px-4 py-3 rounded-xl border-2 outline-none text-gray-900 placeholder-gray-300 text-sm font-medium bg-white transition-colors"
+                        style={{ borderColor: pickupHouseNum ? '#16a34a' : '#f59e0b' }}
+                      />
+                    </div>
+                  )}
+                </>
               )}
 
               {step === 2 && (
-                <AddressField
-                  id="dropoff-input"
-                  value={dropoff}
-                  onChange={v => { setDropoff(v); if (dropoffCoords) setDropoffCoords(null) }}
-                  onFocus={() => setDropoffFocused(true)}
-                  onBlur={() => setDropoffFocused(false)}
-                  placeholder={t.searchPh}
-                  label={t.dropoffLabel}
-                  suggestions={dropoffFocused ? dropoffSugs : []}
-                  onSelect={selectDropoff}
-                  presets={DROPOFF_PRESETS}
-                  coordsSet={!!dropoffCoords}
-                  orChoose={t.orChoose}
-                />
+                <>
+                  <AddressField
+                    id="dropoff-input"
+                    value={dropoff}
+                    onChange={v => { setDropoff(v); if (dropoffCoords) setDropoffCoords(null) }}
+                    onFocus={() => setDropoffFocused(true)}
+                    onBlur={() => setDropoffFocused(false)}
+                    placeholder={t.searchPh}
+                    label={t.dropoffLabel}
+                    suggestions={dropoffFocused ? dropoffSugs : []}
+                    onSelect={selectDropoff}
+                    presets={DROPOFF_PRESETS}
+                    coordsSet={!!dropoffCoords}
+                    orChoose={t.orChoose}
+                  />
+                  {dropoffCoords && !dropoffHasHouseNum && (
+                    <div className="mt-4">
+                      <label className="block text-xs font-semibold text-gray-500 mb-1.5" htmlFor="dropoff-housenum">
+                        {t.houseNumLabel} <span className="font-normal text-red-400">*</span>
+                      </label>
+                      <input
+                        id="dropoff-housenum"
+                        type="text"
+                        value={dropoffHouseNum}
+                        onChange={e => setDropoffHouseNum(e.target.value)}
+                        placeholder={t.houseNumPh}
+                        className="w-full px-4 py-3 rounded-xl border-2 outline-none text-gray-900 placeholder-gray-300 text-sm font-medium bg-white transition-colors"
+                        style={{ borderColor: dropoffHouseNum ? '#16a34a' : '#f59e0b' }}
+                      />
+                    </div>
+                  )}
+                </>
               )}
 
               {continueBtn}
@@ -663,11 +742,15 @@ export default function CreateDeliveryPage() {
         )}
 
         {step === 4 && (() => {
+          const effectivePostcode = dropoffPostcode ?? detectPostcode(dropoff)
+          const allowedDays = getAllowedDays(effectivePostcode)
+          const zoneName = getZoneName(effectivePostcode)
           const dayOptions = [
             { key: 'express', label: t.expressLabel, sub: t.expressSub, iso: null },
             ...Array.from({ length: 7 }, (_, i) => {
               const d = new Date(Date.now() + i * 86400000)
               const iso = d.toISOString().split('T')[0]
+              if (allowedDays && !allowedDays.includes(d.getDay())) return null
               const label = i === 0
                 ? t.slotToday
                 : i === 1
@@ -675,7 +758,7 @@ export default function CreateDeliveryPage() {
                 : d.toLocaleDateString(lang === 'de' ? 'de-DE' : 'en-GB', { weekday: 'short' })
               const sub = d.toLocaleDateString(lang === 'de' ? 'de-DE' : 'en-GB', { day: 'numeric', month: 'short' })
               return { key: iso, label, sub, iso }
-            }),
+            }).filter((d): d is NonNullable<typeof d> => d !== null),
           ]
           const slots = scheduleType !== 'express' ? getTimeSlots(calendarDay) : []
 
@@ -684,6 +767,15 @@ export default function CreateDeliveryPage() {
               <p className="text-xs font-semibold text-green-600 uppercase tracking-wider mb-1">{t.stepOf(4)}</p>
               <h1 className="text-3xl font-black text-gray-900 mb-2">{t.s4Title}</h1>
               <p className="text-gray-400 text-sm mb-5">{t.s4Sub}</p>
+              {zoneName && (
+                <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-xl bg-blue-50 border border-blue-100">
+                  <svg className="w-3.5 h-3.5 text-blue-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+                  </svg>
+                  <p className="text-xs font-semibold text-blue-600">{zoneName}</p>
+                </div>
+              )}
 
               {/* Horizontal day picker */}
               <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1" style={{ scrollbarWidth: 'none' }}>
@@ -817,8 +909,8 @@ export default function CreateDeliveryPage() {
                 </div>
                 <div className="flex flex-col justify-between flex-1 gap-3">
                   {([
-                    { label: t.pickup, value: pickup, setter: (v: string) => { setPickup(v); setPickupCoords(null) }, id: 'review-pickup' },
-                    { label: t.dropoff, value: dropoff, setter: (v: string) => { setDropoff(v); setDropoffCoords(null) }, id: 'review-dropoff' },
+                    { label: t.pickup, value: pickup + (pickupHouseNum ? `, ${pickupHouseNum}` : ''), setter: (v: string) => { setPickup(v); setPickupCoords(null); setPickupHouseNum('') }, id: 'review-pickup' },
+                    { label: t.dropoff, value: dropoff + (dropoffHouseNum ? `, ${dropoffHouseNum}` : ''), setter: (v: string) => { setDropoff(v); setDropoffCoords(null); setDropoffHouseNum('') }, id: 'review-dropoff' },
                   ] as const).map(field => (
                     <div key={field.id}>
                       <div className="flex items-center justify-between mb-1">
@@ -851,8 +943,10 @@ export default function CreateDeliveryPage() {
             </div>
             {(() => {
               const selectedSlot = selectedSlotId ? getSlotById(selectedSlotId) : undefined
+              const fullPickup = pickup + (pickupHouseNum ? `, ${pickupHouseNum}` : '')
+              const fullDropoff = dropoff + (dropoffHouseNum ? `, ${dropoffHouseNum}` : '')
               const p = calculatePrice(
-                pickup, dropoff, size,
+                fullPickup, fullDropoff, size,
                 scheduleType === 'express' ? 'express' : scheduleType,
                 '',
                 orderType === 'shopping' ? stores : 1,

@@ -68,6 +68,20 @@ const surveyQuestions = {
       ],
     },
     {
+      emoji: '📦',
+      question: 'I think a reasonable price to pay for a delivery is:',
+      multi: false,
+      options: [],
+      slider: { min: 1, max: 25, step: 0.5, default: 7, unit: '€' },
+    },
+    {
+      emoji: '💳',
+      question: 'I think a reasonable monthly membership fee would be:',
+      multi: false,
+      options: [],
+      slider: { min: 5, max: 60, step: 1, default: 20, unit: '€' },
+    },
+    {
       emoji: '📣',
       question: 'Would you recommend our service to others?',
       multi: false,
@@ -138,6 +152,20 @@ const surveyQuestions = {
       ],
     },
     {
+      emoji: '📦',
+      question: 'Ich finde für eine Lieferung angemessen zu zahlen:',
+      multi: false,
+      options: [],
+      slider: { min: 1, max: 25, step: 0.5, default: 7, unit: '€' },
+    },
+    {
+      emoji: '💳',
+      question: 'Ich finde für einen monatlichen Mitgliedsbeitrag angemessen:',
+      multi: false,
+      options: [],
+      slider: { min: 5, max: 60, step: 1, default: 20, unit: '€' },
+    },
+    {
       emoji: '📣',
       question: 'Würden Sie unseren Service weiterempfehlen?',
       multi: false,
@@ -161,6 +189,7 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
   const [questionIndex, setQuestionIndex] = useState(0)
   const [answers, setAnswers] = useState<Record<number, string | string[]>>({})
   const [comment, setComment] = useState('')
+  const [sliderValues, setSliderValues] = useState<Record<number, number>>({})
   const [showSurveyBanner, setShowSurveyBanner] = useState(false)
 
   useEffect(() => {
@@ -533,7 +562,28 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
                 )}
               </div>
 
-              {q.text ? (
+              {q.slider ? (
+                <div className="space-y-6">
+                  <div className="text-center">
+                    <p className="text-5xl font-black text-gray-900">
+                      {q.slider.unit}{(sliderValues[questionIndex] ?? q.slider.default).toFixed(q.slider.step < 1 ? 2 : 0)}
+                    </p>
+                  </div>
+                  <input
+                    type="range"
+                    min={q.slider.min}
+                    max={q.slider.max}
+                    step={q.slider.step}
+                    value={sliderValues[questionIndex] ?? q.slider.default}
+                    onChange={e => setSliderValues(prev => ({ ...prev, [questionIndex]: parseFloat(e.target.value) }))}
+                    className="w-full accent-green-600"
+                  />
+                  <div className="flex justify-between text-sm text-gray-400">
+                    <span>{q.slider.unit}{q.slider.min}</span>
+                    <span>{q.slider.unit}{q.slider.max}</span>
+                  </div>
+                </div>
+              ) : q.text ? (
                 <textarea
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
@@ -575,11 +625,16 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
                 </button>
                 <button
                   onClick={() => {
+                    const sliderVal = q.slider ? (sliderValues[questionIndex] ?? q.slider.default) : undefined
+                    const updatedAnswers: Record<number, string | string[]> = sliderVal !== undefined
+                      ? { ...answers, [questionIndex]: `${q.slider!.unit}${sliderVal.toFixed(q.slider!.step < 1 ? 2 : 0)}` }
+                      : answers
                     if (questionIndex === surveyQuestions[surveyLang].length - 1) {
-                      api.surveys.create({ lang: surveyLang, answers: answers as Record<string, unknown> }).catch(console.error)
-                      logToSheets('survey', { lang: surveyLang, answers })
+                      api.surveys.create({ lang: surveyLang, answers: updatedAnswers as Record<string, unknown> }).catch(console.error)
+                      logToSheets('survey', { lang: surveyLang, answers: updatedAnswers })
                       setStep(4)
                     } else {
+                      if (sliderVal !== undefined) setAnswers(updatedAnswers)
                       setQuestionIndex(questionIndex + 1)
                     }
                   }}
