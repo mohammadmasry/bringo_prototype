@@ -934,7 +934,13 @@ export default function CreateDeliveryPage() {
                       }
                     </svg>
                     <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{t.when}:</p>
-                    <p className="text-sm font-bold text-gray-900">{whenLabel}</p>
+                    <p className="text-sm font-bold text-gray-900 flex-1">{whenLabel}</p>
+                    <button
+                      onClick={() => setStep(4)}
+                      className="text-xs font-semibold px-2 py-0.5 rounded-lg transition-colors shrink-0"
+                      style={{ background: '#f0fdf4', color: '#15803d' }}>
+                      {lang === 'de' ? 'Ändern' : 'Edit'}
+                    </button>
                   </div>
                 </div>
               )
