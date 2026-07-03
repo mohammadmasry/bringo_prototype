@@ -816,26 +816,29 @@ export default function CreateDeliveryPage() {
                   <div className="w-3 h-3 rounded-full bg-blue-600" />
                 </div>
                 <div className="flex flex-col justify-between flex-1 gap-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-0.5">{t.pickup}</p>
-                      <p className="text-sm font-medium text-gray-900 leading-snug">{pickup}</p>
+                  {([
+                    { label: t.pickup, value: pickup, setter: (v: string) => { setPickup(v); setPickupCoords(null) }, id: 'review-pickup' },
+                    { label: t.dropoff, value: dropoff, setter: (v: string) => { setDropoff(v); setDropoffCoords(null) }, id: 'review-dropoff' },
+                  ] as const).map(field => (
+                    <div key={field.id}>
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{field.label}</p>
+                        <button
+                          onClick={() => document.getElementById(field.id)?.focus()}
+                          className="text-xs font-semibold px-2 py-0.5 rounded-lg transition-colors"
+                          style={{ background: '#f0fdf4', color: '#15803d' }}>
+                          {lang === 'de' ? 'Ändern' : 'Edit'}
+                        </button>
+                      </div>
+                      <input
+                        id={field.id}
+                        value={field.value}
+                        onChange={e => field.setter(e.target.value)}
+                        className="w-full text-sm font-medium text-gray-900 bg-transparent border-b-2 outline-none py-0.5 transition-colors"
+                        style={{ borderColor: field.value ? '#16a34a' : '#f59e0b' }}
+                      />
                     </div>
-                    <button onClick={() => setStep(1)}
-                      className="shrink-0 text-xs font-semibold text-green-600 hover:text-green-700 hover:underline transition-colors mt-0.5">
-                      {lang === 'de' ? 'Ändern' : 'Edit'}
-                    </button>
-                  </div>
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-0.5">{t.dropoff}</p>
-                      <p className="text-sm font-medium text-gray-900 leading-snug">{dropoff}</p>
-                    </div>
-                    <button onClick={() => setStep(2)}
-                      className="shrink-0 text-xs font-semibold text-green-600 hover:text-green-700 hover:underline transition-colors mt-0.5">
-                      {lang === 'de' ? 'Ändern' : 'Edit'}
-                    </button>
-                  </div>
+                  ))}
                 </div>
               </div>
               <div className="flex items-center gap-3 pt-4 border-t border-gray-200">

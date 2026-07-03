@@ -20,6 +20,15 @@ interface OrderItem {
 
 const PRICES: Record<'S' | 'M' | 'L', number> = { S: 3.2, M: 4.5, L: 5.8 }
 const TEMPLATE_KEY = 'bringo_order_template'
+const LAST_ORDER_KEY = 'bringo_last_order'
+
+interface LastOrder { pickup: string; dropoff: string; description: string; size: 'S' | 'M' | 'L' }
+
+function saveLastOrder(o: LastOrder) { localStorage.setItem(LAST_ORDER_KEY, JSON.stringify(o)) }
+function loadLastOrder(): LastOrder | null {
+  try { const d = localStorage.getItem(LAST_ORDER_KEY); return d ? JSON.parse(d) : null }
+  catch { return null }
+}
 
 function parseItems(description: string): OrderItem[] {
   const parts = description.split(/[,;|\n]+/).map(s => s.trim()).filter(Boolean)
@@ -44,10 +53,6 @@ function saveTemplate(items: OrderItem[]) {
   localStorage.setItem(TEMPLATE_KEY, JSON.stringify(items))
 }
 
-function loadTemplate(): OrderItem[] | null {
-  try { const d = localStorage.getItem(TEMPLATE_KEY); return d ? JSON.parse(d) : null }
-  catch { return null }
-}
 
 
 const tr = {
@@ -143,13 +148,12 @@ export default function EasyOrderPage() {
   const [voiceError, setVoiceError] = useState(false)
   const [conversationId, setConversationId] = useState<string | null>(null)
   const [currentItems, setCurrentItems] = useState<OrderItem[] | null>(null)
-  const [savedTemplate, setSavedTemplate] = useState<OrderItem[] | null>(null)
-
   const bottomRef = useRef<HTMLDivElement>(null)
   const photoInputRef = useRef<HTMLInputElement>(null)
   const recognitionRef = useRef<{ stop: () => void } | null>(null)
 
-  useEffect(() => { setSavedTemplate(loadTemplate()) }, [])
+  const [savedLastOrder, setSavedLastOrder] = useState<LastOrder | null>(null)
+  useEffect(() => { setSavedLastOrder(loadLastOrder()) }, [])
 
   const [currentPickup, setCurrentPickup] = useState<string | null>(null)
   const [currentDropoff, setCurrentDropoff] = useState<string | null>(null)
@@ -275,8 +279,11 @@ export default function EasyOrderPage() {
   const handleConfirm = (order: DetectedOrder) => {
     const items = currentItems ?? parseItems(order.description)
     saveTemplate(items)
+    const pickup = currentPickup ?? order.pickup
+    const dropoff = currentDropoff ?? order.dropoff
     const description = items.map(it => `${it.qty > 1 ? `${it.qty}x ` : ''}${it.name}`).join(', ')
-    navigate('/create-delivery', { state: { firstName, fromAI: true, prefill: { ...order, pickup: currentPickup ?? order.pickup, dropoff: currentDropoff ?? order.dropoff, description }, conversationId } })
+    saveLastOrder({ pickup, dropoff, description, size: order.size })
+    navigate('/create-delivery', { state: { firstName, fromAI: true, prefill: { ...order, pickup, dropoff, description }, conversationId } })
   }
 
   const updateItem = (id: string, patch: Partial<OrderItem>) =>
@@ -401,16 +408,17 @@ export default function EasyOrderPage() {
           </div>
         ))}
 
-        {messages.length === 1 && savedTemplate && savedTemplate.length > 0 && (
+        {messages.length === 1 && savedLastOrder && (
           <button
-            onClick={() => {
-              setCurrentItems(savedTemplate)
-              const description = savedTemplate.map(it => `${it.qty > 1 ? `${it.qty}x ` : ''}${it.name}`).join(', ')
-              send(description)
-            }}
+            onClick={() => navigate('/create-delivery', {
+              state: { firstName, fromAI: true, prefill: savedLastOrder, conversationId }
+            })}
             className="self-start flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-green-200 bg-green-50 text-green-700 text-sm font-semibold hover:border-green-400 transition-all"
           >
-            🔁 {t.repeatOrder}
+            <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15">
+              <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd"/>
+            </svg>
+            {t.repeatOrder}
           </button>
         )}
 
