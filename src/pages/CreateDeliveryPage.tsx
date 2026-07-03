@@ -261,7 +261,7 @@ function AddressField({
             {suggestions.map(r => (
               <button
                 key={r.place_id}
-                onMouseDown={() => onSelect(formatNom(r), { lat: parseFloat(r.lat), lon: parseFloat(r.lon) }, !!r._photon?.housenumber, r._photon?.postcode)}
+                onMouseDown={() => onSelect(formatNom(r), { lat: parseFloat(r.lat), lon: parseFloat(r.lon) }, !!(r._photon?.housenumber || r._photon?.name), r._photon?.postcode)}
                 className="w-full text-left px-4 py-3 text-sm hover:bg-green-50 transition-colors flex items-start gap-3 border-b border-gray-50 last:border-0"
               >
                 <svg className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
