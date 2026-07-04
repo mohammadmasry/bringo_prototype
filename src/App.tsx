@@ -23,7 +23,7 @@ import PrototypeDashboard from './pages/PrototypeDashboard'
 import ProfitLossCalculator from './pages/ProfitLossCalculator.tsx'
 
 const LAST_PATH_KEY = 'bringo-last-path'
-const NO_RESTORE = new Set(['/', '/otp', '/register'])
+const NO_RESTORE = new Set(['/', '/otp', '/register', '/easy-order'])
 
 function RouteMemory() {
   const location = useLocation()
