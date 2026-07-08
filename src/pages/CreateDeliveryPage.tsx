@@ -3,8 +3,9 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import BringoLogo from '../components/BringoLogo'
 import LangToggle from '../components/LangToggle'
 import { useLang } from '../hooks/useLang'
-import ComingSoonSheet from '../components/ComingSoonSheet'
 import { calculatePrice, getTimeSlots, getSlotById, type ItemRange, type TimeSlot } from '../lib/pricing'
+import { setActiveOrder } from '../lib/orderStore'
+import { detectPostcode, getAllowedDays, getZoneName } from '../lib/zones'
 import DeliveryMap, { type Coords } from '../components/DeliveryMap'
 
 const PICKUP_PRESETS = [
@@ -20,38 +21,6 @@ const DROPOFF_PRESETS = [
   { label: 'Ringstraße 44, 84347 Pfarrkirchen', lat: 48.4336, lon: 12.9503, postcode: '84347' },
   { label: 'Kirchgasse 5, 84347 Pfarrkirchen', lat: 48.4364, lon: 12.9473, postcode: '84347' },
 ]
-
-// 0=Sun 1=Mon 2=Tue 3=Wed 4=Thu 5=Fri 6=Sat
-const DELIVERY_ZONES = [
-  { name: 'Pfarrkirchen',             zips: ['84347'],          days: [0,1,2,3,4,5,6] },
-  { name: 'Bad Birnbach',             zips: ['84364'],          days: [1,3,6] },
-  { name: 'Eggenfelden / Postmünster', zips: ['84307','84389'], days: [2,4,0] },
-]
-
-const CITY_ZONE_KEYWORDS: { words: string[]; zip: string }[] = [
-  { words: ['bad birnbach', 'birnbach'],              zip: '84364' },
-  { words: ['eggenfelden'],                           zip: '84307' },
-  { words: ['postmünster', 'postmuenster'],           zip: '84389' },
-  { words: ['pfarrkirchen'],                          zip: '84347' },
-]
-
-function detectPostcode(address: string): string | null {
-  const lower = address.toLowerCase()
-  const explicit = address.match(/\b(\d{5})\b/)
-  if (explicit) return explicit[1]
-  return CITY_ZONE_KEYWORDS.find(e => e.words.some(w => lower.includes(w)))?.zip ?? null
-}
-
-function getAllowedDays(postcode: string | null): number[] | null {
-  if (!postcode) return null
-  return DELIVERY_ZONES.find(z => z.zips.includes(postcode))?.days ?? null
-}
-
-function getZoneName(postcode: string | null): string | null {
-  if (!postcode) return null
-  return DELIVERY_ZONES.find(z => z.zips.includes(postcode))?.name ?? null
-}
-
 
 const tr = {
   de: {
@@ -103,6 +72,10 @@ const tr = {
     priceBase: 'Grundpreis', priceDist: 'Entfernung', pricePeak: 'Stoßzeit', priceDiscount: 'Rabatt',
     priceExpress: 'Expressaufschlag', priceTotal: 'Gesamt',
     priceStores: 'Läden', priceItems: 'Artikel',
+    confirmTitle: 'Bestellung aufgegeben!', confirmSub: 'Dein Kurier wurde benachrichtigt.',
+    confirmOrderNum: 'Bestellnummer', confirmEta: 'Geschätzte Lieferzeit',
+    confirmEtaExpress: '~30 Min.', confirmEtaStandard: '~25 Min.',
+    confirmTrack: 'Bestellung verfolgen', confirmHome: 'Zurück zur Startseite',
   },
   en: {
     // step 0
@@ -153,6 +126,10 @@ const tr = {
     priceBase: 'Base price', priceDist: 'Distance', pricePeak: 'Peak hour', priceDiscount: 'Discount',
     priceExpress: 'Express fee', priceTotal: 'Total',
     priceStores: 'Stores', priceItems: 'Items',
+    confirmTitle: 'Order placed!', confirmSub: 'Your courier has been notified.',
+    confirmOrderNum: 'Order number', confirmEta: 'Estimated delivery time',
+    confirmEtaExpress: '~30 min', confirmEtaStandard: '~25 min',
+    confirmTrack: 'Track order', confirmHome: 'Back to home',
   },
 }
 
@@ -336,6 +313,7 @@ export default function CreateDeliveryPage() {
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(
     (state as { slotId?: string } | null)?.slotId ?? null
   )
+  const [orderId, setOrderId] = useState('')
   const [pickupHouseNum, setPickupHouseNum] = useState('')
   const [dropoffHouseNum, setDropoffHouseNum] = useState('')
   const [pickupHasHouseNum, setPickupHasHouseNum] = useState(false)
@@ -399,14 +377,70 @@ export default function CreateDeliveryPage() {
     : step === 5 ? pickup.trim().length > 0 && dropoff.trim().length > 0
     : true
 
-  const goNext = () => { if (step < 5) setStep(s => s + 1); else setStep(6) }
+  const goNext = () => {
+    if (step < 5) { setStep(s => s + 1); return }
+    const fullPickup = pickup + (pickupHouseNum ? `, ${pickupHouseNum}` : '')
+    const fullDropoff = dropoff + (dropoffHouseNum ? `, ${dropoffHouseNum}` : '')
+    const selectedSlot = selectedSlotId ? getSlotById(selectedSlotId) : null
+    const price = calculatePrice(fullPickup, fullDropoff, size, scheduleType, '', stores, itemRange, selectedSlot?.priceMod ?? null).total
+    const id = `BRG-${Date.now().toString().slice(-6)}`
+    setActiveOrder({
+      id, pickup: fullPickup, dropoff: fullDropoff,
+      description: orderType === 'shopping' ? shoppingList : (itemDesc || 'Paket'),
+      size, price, note, status: 'searching',
+      scheduleType: scheduleType === 'express' ? 'now' : scheduleType as 'now' | 'later',
+    })
+    setOrderId(id)
+    setStep(6)
+  }
   const goBack = () => {
     if (state?.fromAI && step === 1) { navigate('/easy-order'); return }
     if (step > 0) setStep(s => s - 1); else navigate('/')
   }
 
   if (step === 6) {
-    return <ComingSoonSheet onBack={() => setStep(5)} showFeedback feedbackPage="create-delivery" />
+    const fullPickup = pickup + (pickupHouseNum ? `, ${pickupHouseNum}` : '')
+    const fullDropoff = dropoff + (dropoffHouseNum ? `, ${dropoffHouseNum}` : '')
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6">
+        <div className="w-full max-w-md bg-white rounded-3xl shadow-sm border border-gray-100 p-8 flex flex-col items-center gap-6">
+          <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center">
+            <svg className="w-10 h-10 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <div className="text-center">
+            <h1 className="text-2xl font-black text-gray-900">{t.confirmTitle}</h1>
+            <p className="text-gray-500 mt-1">{t.confirmSub}</p>
+          </div>
+          <div className="w-full bg-gray-50 rounded-2xl p-4 flex justify-between items-center">
+            <span className="text-sm text-gray-500">{t.confirmOrderNum}</span>
+            <span className="font-mono font-bold text-gray-900">{orderId}</span>
+          </div>
+          <div className="w-full space-y-2">
+            <div className="flex items-start gap-3">
+              <div className="w-2 h-2 rounded-full bg-green-500 mt-1.5 shrink-0" />
+              <span className="text-sm text-gray-700">{fullPickup}</span>
+            </div>
+            <div className="w-px h-4 bg-gray-200 ml-1" />
+            <div className="flex items-start gap-3">
+              <div className="w-2 h-2 rounded-full bg-blue-600 mt-1.5 shrink-0" />
+              <span className="text-sm text-gray-700">{fullDropoff}</span>
+            </div>
+          </div>
+          <div className="w-full bg-green-50 rounded-2xl p-4 flex justify-between items-center">
+            <span className="text-sm text-green-700">{t.confirmEta}</span>
+            <span className="font-bold text-green-700">{scheduleType === 'express' ? t.confirmEtaExpress : t.confirmEtaStandard}</span>
+          </div>
+          <button onClick={() => navigate('/active-order')} className="w-full bg-green-600 text-white py-4 rounded-2xl font-bold text-base">
+            {t.confirmTrack}
+          </button>
+          <button onClick={() => navigate('/home/customer')} className="w-full text-gray-500 py-2 font-medium">
+            {t.confirmHome}
+          </button>
+        </div>
+      </div>
+    )
   }
 
   const stepBar = (

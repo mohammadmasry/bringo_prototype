@@ -18,7 +18,7 @@ interface OrderItem {
   qty: number
 }
 
-const PRICES: Record<'S' | 'M' | 'L', number> = { S: 3.2, M: 4.5, L: 5.8 }
+const PRICES: Record<'S' | 'M' | 'L', number> = { S: 5.0, M: 6.0, L: 7.5 }
 const TEMPLATE_KEY = 'bringo_order_template'
 const LAST_ORDER_KEY = 'bringo_last_order'
 

@@ -1,102 +1,113 @@
-import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
-import { useNavigate } from 'react-router-dom'
-import { clearSession } from '../lib/session'
-import { api } from '../lib/api'
-import { logToSheets } from '../lib/sheets'
-import ComingSoonSheet from '../components/ComingSoonSheet'
-import { applyTextSize, getTextSize, type TextSize } from '../lib/textSize'
-import { useLang } from '../hooks/useLang'
-
-
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
+import { clearSession } from "../lib/session";
+import { api } from "../lib/api";
+import { logToSheets } from "../lib/sheets";
+import ComingSoonSheet from "../components/ComingSoonSheet";
+import { applyTextSize, getTextSize, type TextSize } from "../lib/textSize";
+import { useLang } from "../hooks/useLang";
 
 const surveyQuestions = {
   en: [
     {
-      emoji: '👤',
-      question: 'Who are you ordering for?',
+      emoji: "👤",
+      question: "Who are you ordering for?",
       multi: true,
-      options: ['For myself', 'For someone else'],
+      options: ["For myself", "For someone else"],
     },
     {
-      emoji: '🎂',
-      question: 'What is your age group?',
+      emoji: "🎂",
+      question: "What is your age group?",
       multi: false,
-      options: ['Under 18', '18 – 25', '26 – 35', '36 – 50', '51 – 70', '70+'],
+      options: ["Under 18", "18 – 25", "26 – 35", "36 – 50", "51 – 70", "70+"],
     },
     {
-      emoji: '🎓',
-      question: 'Is it important to you that the couriers are registered students?',
+      emoji: "🎓",
+      question:
+        "Is it important to you that the couriers are registered students?",
       multi: false,
-      options: ['Yes', "No, I don't care", "Don't know / No answer"],
+      options: ["Yes", "No, I don't care", "Don't know / No answer"],
     },
     {
-      emoji: '💳',
-      question: 'Which payment method would you prefer?',
-      multi: true,
-      options: ['Cash on delivery', 'EC card payment on delivery', 'SEPA Direct Debit', 'PayPal', 'Credit card', 'Other'],
-    },
-    {
-      emoji: '📅',
-      question: 'How often do you expect to use the service?',
-      multi: false,
-      options: ['Occasionally', 'Frequently', 'Once in a while / irregular', "I don't know yet"],
-    },
-    {
-      emoji: '🛒',
-      question: 'What type of orders would you like to process?',
+      emoji: "💳",
+      question: "Which payment method would you prefer?",
       multi: true,
       options: [
-        'Grocery shopping / Weekly shop',
-        'Cooked dishes from restaurants',
-        'Medicines / pharmacy visits',
-        'Errands / services',
-        'Individual items',
-        'Other',
+        "Cash on delivery",
+        "EC card payment on delivery",
+        "SEPA Direct Debit",
+        "PayPal",
+        "Credit card",
+        "Other",
       ],
     },
     {
-      emoji: '💚',
-      question: 'How useful do you think a courier service like this is?',
+      emoji: "📅",
+      question: "How often do you expect to use the service?",
       multi: false,
       options: [
-        'Very useful – I would use it regularly',
+        "Occasionally",
+        "Frequently",
+        "Once in a while / irregular",
+        "I don't know yet",
+      ],
+    },
+    {
+      emoji: "🛒",
+      question: "What type of orders would you like to process?",
+      multi: true,
+      options: [
+        "Grocery shopping / Weekly shop",
+        "Cooked dishes from restaurants",
+        "Medicines / pharmacy visits",
+        "Errands / services",
+        "Individual items",
+        "Other",
+      ],
+    },
+    {
+      emoji: "💚",
+      question: "How useful do you think a courier service like this is?",
+      multi: false,
+      options: [
+        "Very useful – I would use it regularly",
         "Useful – I’d use it from time to time",
-        'Not something I personally need, but I see the benefits',
-        'Not appropriate / necessary',
+        "Not something I personally need, but I see the benefits",
+        "Not appropriate / necessary",
         "I don't know",
       ],
     },
     {
-      emoji: '📦',
-      question: 'I think a reasonable price to pay for a delivery is:',
+      emoji: "📦",
+      question: "I think a reasonable price to pay for a delivery is:",
       multi: false,
       options: [],
-      slider: { min: 3, max: 25, step: 0.5, default: 7, unit: '€' },
+      slider: { min: 3, max: 25, step: 0.5, default: 7, unit: "€" },
     },
     {
-      emoji: '🛍️',
-      question: 'I think a reasonable price for shopping + delivery is:',
+      emoji: "🛍️",
+      question: "I think a reasonable price for shopping + delivery is:",
       multi: false,
       options: [],
-      slider: { min: 7, max: 35, step: 0.5, default: 12, unit: '€' },
+      slider: { min: 7, max: 35, step: 0.5, default: 12, unit: "€" },
     },
     {
-      emoji: '💳',
-      question: 'I think a reasonable monthly membership fee would be:',
+      emoji: "💳",
+      question: "I think a reasonable monthly membership fee would be:",
       multi: false,
       options: [],
-      slider: { min: 5, max: 60, step: 1, default: 20, unit: '€' },
+      slider: { min: 5, max: 60, step: 1, default: 20, unit: "€" },
     },
     {
-      emoji: '📣',
-      question: 'Would you recommend our service to others?',
+      emoji: "📣",
+      question: "Would you recommend our service to others?",
       multi: false,
-      options: ['Yes', 'Perhaps', 'No'],
+      options: ["Yes", "Perhaps", "No"],
     },
     {
-      emoji: '💬',
-      question: 'Do you have any further requests or comments?',
+      emoji: "💬",
+      question: "Do you have any further requests or comments?",
       multi: false,
       options: [],
       text: true,
@@ -104,212 +115,246 @@ const surveyQuestions = {
   ],
   de: [
     {
-      emoji: '👤',
-      question: 'Für wen bestellen Sie?',
+      emoji: "👤",
+      question: "Für wen bestellen Sie?",
       multi: true,
-      options: ['Für mich selbst', 'Für jemand anderen'],
+      options: ["Für mich selbst", "Für jemand anderen"],
     },
     {
-      emoji: '🎂',
-      question: 'Welcher Altersgruppe gehören Sie an?',
+      emoji: "🎂",
+      question: "Welcher Altersgruppe gehören Sie an?",
       multi: false,
-      options: ['Unter 18', '18 – 25', '26 – 35', '36 – 50', '51 – 70', '70+'],
+      options: ["Unter 18", "18 – 25", "26 – 35", "36 – 50", "51 – 70", "70+"],
     },
     {
-      emoji: '🎓',
-      question: 'Ist es Ihnen wichtig, dass die Kuriere zertifizierte Studierende sind?',
+      emoji: "🎓",
+      question:
+        "Ist es Ihnen wichtig, dass die Kuriere zertifizierte Studierende sind?",
       multi: false,
-      options: ['Ja', 'Nein, das ist mir egal', 'Weiß nicht / keine Angabe'],
+      options: ["Ja", "Nein, das ist mir egal", "Weiß nicht / keine Angabe"],
     },
     {
-      emoji: '💳',
-      question: 'Welche Zahlungsart würden Sie bevorzugen?',
-      multi: true,
-      options: ['Barzahlung bei Übergabe', 'EC-Kartenzahlung bei Übergabe', 'SEPA-Lastschrift', 'PayPal', 'Kreditkarte', 'Andere'],
-    },
-    {
-      emoji: '📅',
-      question: 'Wie häufig würden Sie den Service voraussichtlich nutzen?',
-      multi: false,
-      options: ['Gelegentlich', 'Häufig', 'Vereinzelt / unregelmäßig', 'Weiß noch nicht'],
-    },
-    {
-      emoji: '🛒',
-      question: 'Welche Art von Bestellungen würden Sie abwickeln wollen?',
+      emoji: "💳",
+      question: "Welche Zahlungsart würden Sie bevorzugen?",
       multi: true,
       options: [
-        'Lebensmitteleinkäufe / Wocheneinkauf',
-        'Gekochtes Essen aus Restaurants',
-        'Medikamente / Apothekengänge',
-        'Besorgungen / Dienstleistungen',
-        'Einzelposten',
-        'Andere',
+        "Barzahlung bei Übergabe",
+        "EC-Kartenzahlung bei Übergabe",
+        "SEPA-Lastschrift",
+        "PayPal",
+        "Kreditkarte",
+        "Andere",
       ],
     },
     {
-      emoji: '💚',
-      question: 'Wie sinnvoll finden Sie einen solchen Kurier-Service?',
+      emoji: "📅",
+      question: "Wie häufig würden Sie den Service voraussichtlich nutzen?",
       multi: false,
       options: [
-        'Sehr sinnvoll – ich würde ihn regelmäßig nutzen',
-        'Sinnvoll – ich würde ihn gelegentlich nutzen',
-        'Nicht notwendig für mich persönlich, aber ich sehe den Nutzen',
-        'Nicht sinnvoll / erforderlich',
-        'Weiß nicht',
+        "Gelegentlich",
+        "Häufig",
+        "Vereinzelt / unregelmäßig",
+        "Weiß noch nicht",
       ],
     },
     {
-      emoji: '📦',
-      question: 'Ich finde für eine Lieferung angemessen zu zahlen:',
+      emoji: "🛒",
+      question: "Welche Art von Bestellungen würden Sie abwickeln wollen?",
+      multi: true,
+      options: [
+        "Lebensmitteleinkäufe / Wocheneinkauf",
+        "Gekochtes Essen aus Restaurants",
+        "Medikamente / Apothekengänge",
+        "Besorgungen / Dienstleistungen",
+        "Einzelposten",
+        "Andere",
+      ],
+    },
+    {
+      emoji: "💚",
+      question: "Wie sinnvoll finden Sie einen solchen Kurier-Service?",
+      multi: false,
+      options: [
+        "Sehr sinnvoll – ich würde ihn regelmäßig nutzen",
+        "Sinnvoll – ich würde ihn gelegentlich nutzen",
+        "Nicht notwendig für mich persönlich, aber ich sehe den Nutzen",
+        "Nicht sinnvoll / erforderlich",
+        "Weiß nicht",
+      ],
+    },
+    {
+      emoji: "📦",
+      question: "Ich finde für eine Lieferung angemessen zu zahlen:",
       multi: false,
       options: [],
-      slider: { min: 3, max: 25, step: 0.5, default: 7, unit: '€' },
+      slider: { min: 3, max: 25, step: 0.5, default: 7, unit: "€" },
     },
     {
-      emoji: '🛍️',
-      question: 'Ich finde für Einkauf + Lieferung angemessen zu zahlen:',
+      emoji: "🛍️",
+      question: "Ich finde für Einkauf + Lieferung angemessen zu zahlen:",
       multi: false,
       options: [],
-      slider: { min: 7, max: 35, step: 0.5, default: 12, unit: '€' },
+      slider: { min: 7, max: 35, step: 0.5, default: 12, unit: "€" },
     },
     {
-      emoji: '💳',
-      question: 'Ich finde für einen monatlichen Mitgliedsbeitrag angemessen:',
+      emoji: "💳",
+      question: "Ich finde für einen monatlichen Mitgliedsbeitrag angemessen:",
       multi: false,
       options: [],
-      slider: { min: 5, max: 60, step: 1, default: 20, unit: '€' },
+      slider: { min: 5, max: 60, step: 1, default: 20, unit: "€" },
     },
     {
-      emoji: '📣',
-      question: 'Würden Sie unseren Service weiterempfehlen?',
+      emoji: "📣",
+      question: "Würden Sie unseren Service weiterempfehlen?",
       multi: false,
-      options: ['Ja', 'Vielleicht', 'Nein'],
+      options: ["Ja", "Vielleicht", "Nein"],
     },
     {
-      emoji: '💬',
-      question: 'Haben Sie noch Wünsche oder Anmerkungen?',
+      emoji: "💬",
+      question: "Haben Sie noch Wünsche oder Anmerkungen?",
       multi: false,
       options: [],
       text: true,
     },
   ],
-}
+};
 
-function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => void }) {
-  const navigate = useNavigate()
-  const [step, setStep] = useState(0)
-  const { lang: surveyLang, setLang: setSurveyLang } = useLang()
-  const [textSize, setTextSize] = useState<TextSize>(() => getTextSize())
-  const [questionIndex, setQuestionIndex] = useState(0)
-  const [answers, setAnswers] = useState<Record<number, string | string[]>>({})
-  const [comment, setComment] = useState('')
-  const [sliderValues, setSliderValues] = useState<Record<number, number>>({})
-  const [showSurveyBanner, setShowSurveyBanner] = useState(false)
+function OnboardingFlow({
+  onLogin,
+}: {
+  onFinish?: () => void;
+  onLogin: () => void;
+}) {
+  const navigate = useNavigate();
+  const [step, setStep] = useState(0);
+  const { lang: surveyLang, setLang: setSurveyLang } = useLang();
+  const [textSize, setTextSize] = useState<TextSize>(() => getTextSize());
+  const [questionIndex, setQuestionIndex] = useState(0);
+  const [answers, setAnswers] = useState<Record<number, string | string[]>>({});
+  const [comment, setComment] = useState("");
+  const [sliderValues, setSliderValues] = useState<Record<number, number>>({});
+  const [showSurveyBanner, setShowSurveyBanner] = useState(false);
 
   useEffect(() => {
-    if (step !== 0) return
-    const t = setTimeout(() => setShowSurveyBanner(true), 3000)
-    return () => clearTimeout(t)
-  }, [step])
+    if (step !== 0) return;
+    const t = setTimeout(() => setShowSurveyBanner(true), 3000);
+    return () => clearTimeout(t);
+  }, [step]);
 
   const introText = {
     en: {
       leftDesc:
-        'Bringo supports people with groceries, pharmacy visits, restaurant orders, and everyday errands – local, fast, and straightforward.',
-      welcome: 'Welcome to',
-      groceries: 'Groceries',
-      pharmacy: 'Deliveries',
-      errands: 'Errands',
-      orderBtn: 'Place an order',
-      login: 'Log in',
-      surveyTitle: 'Help us improve Bringo',
-      surveyMeta: '2 min · Anonymous · Student-led',
-      surveyCta: 'Start survey →',
-      surveyDismiss: 'Maybe later',
-      privacy: 'Your answers are anonymous and used only to improve Bringo.',
+        "Bringo supports people with groceries, pharmacy visits, restaurant orders, and everyday errands – local, fast, and straightforward.",
+      welcome: "Welcome to",
+      groceries: "Groceries",
+      pharmacy: "Deliveries",
+      errands: "Errands",
+      orderBtn: "Place an order",
+      login: "Log in",
+      surveyTitle: "Help us improve Bringo",
+      surveyMeta: "2 min · Anonymous · Student-led",
+      surveyCta: "Start survey →",
+      surveyDismiss: "Maybe later",
+      privacy: "Your answers are anonymous and used only to improve Bringo.",
     },
     de: {
       leftDesc:
-        'Bringo unterstützt Menschen bei Einkäufen, Apothekengängen, Restaurantbestellungen und alltäglichen Besorgungen – lokal, schnell und unkompliziert.',
-      welcome: 'Willkommen bei',
-      groceries: 'Einkäufe',
-      pharmacy: 'Lieferungen',
-      errands: 'Besorgungen',
-      orderBtn: 'Bestellung aufgeben',
-      login: 'Anmelden',
-      surveyTitle: 'Helfen Sie uns, Bringo zu verbessern',
-      surveyMeta: '2 Min · Anonym · Von Studierenden',
-      surveyCta: 'Umfrage starten →',
-      surveyDismiss: 'Vielleicht später',
-      privacy: 'Ihre Antworten sind anonym und werden nur zur Verbesserung von Bringo genutzt.',
+        "Bringo unterstützt Menschen bei Einkäufen, Apothekengängen, Restaurantbestellungen und alltäglichen Besorgungen – lokal, schnell und unkompliziert.",
+      welcome: "Willkommen bei",
+      groceries: "Einkäufe",
+      pharmacy: "Lieferungen",
+      errands: "Besorgungen",
+      orderBtn: "Bestellung aufgeben",
+      login: "Anmelden",
+      surveyTitle: "Helfen Sie uns, Bringo zu verbessern",
+      surveyMeta: "2 Min · Anonym · Von Studierenden",
+      surveyCta: "Umfrage starten →",
+      surveyDismiss: "Vielleicht später",
+      privacy:
+        "Ihre Antworten sind anonym und werden nur zur Verbesserung von Bringo genutzt.",
     },
-  }
+  };
 
-  const intro = introText[surveyLang]
+  const intro = introText[surveyLang];
 
   const fontClass =
-    textSize === 'normal' ? 'text-base' : textSize === 'large' ? 'text-lg' : 'text-xl'
+    textSize === "normal"
+      ? "text-base"
+      : textSize === "large"
+        ? "text-lg"
+        : "text-xl";
 
-  const q = surveyQuestions[surveyLang][questionIndex]
+  const q = surveyQuestions[surveyLang][questionIndex];
 
   const selectOption = (option: string) => {
     if (q.multi) {
       const current = Array.isArray(answers[questionIndex])
         ? (answers[questionIndex] as string[])
-        : []
+        : [];
       setAnswers({
         ...answers,
         [questionIndex]: current.includes(option)
           ? current.filter((item) => item !== option)
           : [...current, option],
-      })
+      });
     } else {
-      setAnswers({ ...answers, [questionIndex]: option })
+      setAnswers({ ...answers, [questionIndex]: option });
     }
-  }
+  };
 
   const isSelected = (option: string) => {
-    const answer = answers[questionIndex]
-    return q.multi && Array.isArray(answer) ? answer.includes(option) : answer === option
-  }
+    const answer = answers[questionIndex];
+    return q.multi && Array.isArray(answer)
+      ? answer.includes(option)
+      : answer === option;
+  };
 
   return (
     <div
       className={`min-h-screen flex ${fontClass}`}
       style={{
-        background: 'linear-gradient(150deg, #0d3d1e 0%, #14532d 35%, #166534 70%, #16a34a 100%)',
+        background:
+          "linear-gradient(150deg, #0d3d1e 0%, #14532d 35%, #166534 70%, #16a34a 100%)",
       }}
     >
       <div className="hidden md:flex md:w-[45%] relative flex-col justify-center p-10 lg:p-14 overflow-hidden">
         <motion.div
           className="absolute inset-0 pointer-events-none"
           animate={{ opacity: [0.3, 1, 0.3] }}
-          transition={{ duration: 5, ease: 'easeInOut', repeat: Infinity }}
+          transition={{ duration: 5, ease: "easeInOut", repeat: Infinity }}
           style={{
-            backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.18) 1.5px, transparent 1.5px)',
-            backgroundSize: '28px 28px',
+            backgroundImage:
+              "radial-gradient(circle, rgba(255,255,255,0.18) 1.5px, transparent 1.5px)",
+            backgroundSize: "28px 28px",
           }}
         />
 
         <div className="relative z-10">
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-black leading-snug max-w-md" style={{ color: 'rgba(255,255,255,0.82)' }}>
-            {surveyLang === 'de' ? (
+          <h1
+            className="text-xl sm:text-2xl lg:text-3xl font-black leading-snug max-w-md"
+            style={{ color: "rgba(255,255,255,0.82)" }}
+          >
+            {surveyLang === "de" ? (
               <>
-                Bringo unterstützt Menschen bei{' '}
-                <span style={{ color: '#a7f3d0' }}>Einkäufen</span>,{' '}
-                <span style={{ color: '#a7f3d0' }}>Apothekengängen</span>,{' '}
-                <span style={{ color: '#a7f3d0' }}>Restaurantbestellungen</span>{' '}
-                und alltäglichen Besorgungen –{' '}
-                <span className="text-green-300">lokal, schnell und unkompliziert.</span>
+                Bringo unterstützt Menschen bei{" "}
+                <span style={{ color: "#a7f3d0" }}>Einkäufen</span>,{" "}
+                <span style={{ color: "#a7f3d0" }}>Apothekengängen</span>,{" "}
+                <span style={{ color: "#a7f3d0" }}>Restaurantbestellungen</span>{" "}
+                und alltäglichen Besorgungen –{" "}
+                <span className="text-green-300">
+                  lokal, schnell und unkompliziert.
+                </span>
               </>
             ) : (
               <>
-                Bringo supports people with{' '}
-                <span style={{ color: '#a7f3d0' }}>groceries</span>,{' '}
-                <span style={{ color: '#a7f3d0' }}>pharmacy visits</span>,{' '}
-                <span style={{ color: '#a7f3d0' }}>restaurant orders</span>,{' '}
-                and everyday errands –{' '}
-                <span className="text-green-300">local, fast, and straightforward.</span>
+                Bringo supports people with{" "}
+                <span style={{ color: "#a7f3d0" }}>groceries</span>,{" "}
+                <span style={{ color: "#a7f3d0" }}>pharmacy visits</span>,{" "}
+                <span style={{ color: "#a7f3d0" }}>restaurant orders</span>, and
+                everyday errands –{" "}
+                <span className="text-green-300">
+                  local, fast, and straightforward.
+                </span>
               </>
             )}
           </h1>
@@ -317,25 +362,49 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
 
         <div className="absolute bottom-10 left-10 lg:left-14 z-10 flex flex-col gap-2">
           <button
-            onClick={() => (window.location.href = '/partner')}
+            onClick={() => (window.location.href = "/partner")}
             className="flex items-center gap-2 text-white/50 hover:text-white transition-colors group w-fit"
           >
-            <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 21v-7.5a.75.75 0 0 1 .75-.75h3a.75.75 0 0 1 .75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349M3.75 21V9.349m0 0a3.001 3.001 0 0 0 3.75-.615A2.993 2.993 0 0 0 9.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 0 0 2.25 1.016 2.993 2.993 0 0 0 2.25-1.016 3.001 3.001 0 0 0 3.75.614m-16.5 0a3.004 3.004 0 0 1-.621-4.72l1.189-1.19A1.5 1.5 0 0 1 5.378 3h13.243a1.5 1.5 0 0 1 1.06.44l1.19 1.189a3 3 0 0 1-.621 4.72M6.75 18h3.75a.75.75 0 0 0 .75-.75V13.5a.75.75 0 0 0-.75-.75H6.75a.75.75 0 0 0-.75.75v3.75c0 .414.336.75.75.75z" />
+            <svg
+              className="w-4 h-4 shrink-0"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={1.8}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M13.5 21v-7.5a.75.75 0 0 1 .75-.75h3a.75.75 0 0 1 .75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349M3.75 21V9.349m0 0a3.001 3.001 0 0 0 3.75-.615A2.993 2.993 0 0 0 9.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 0 0 2.25 1.016 2.993 2.993 0 0 0 2.25-1.016 3.001 3.001 0 0 0 3.75.614m-16.5 0a3.004 3.004 0 0 1-.621-4.72l1.189-1.19A1.5 1.5 0 0 1 5.378 3h13.243a1.5 1.5 0 0 1 1.06.44l1.19 1.189a3 3 0 0 1-.621 4.72M6.75 18h3.75a.75.75 0 0 0 .75-.75V13.5a.75.75 0 0 0-.75-.75H6.75a.75.75 0 0 0-.75.75v3.75c0 .414.336.75.75.75z"
+              />
             </svg>
             <span className="text-base font-medium group-hover:underline underline-offset-2">
-              {surveyLang === 'de' ? 'Für Geschäftspartner' : 'For business partners'}
+              {surveyLang === "de"
+                ? "Für Geschäftspartner"
+                : "For business partners"}
             </span>
           </button>
           <button
-            onClick={() => (window.location.href = '/courier-login')}
+            onClick={() => (window.location.href = "/courier-login")}
             className="flex items-center gap-2 text-white/50 hover:text-white transition-colors group w-fit"
           >
-            <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0zM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+            <svg
+              className="w-4 h-4 shrink-0"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={1.8}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M15.75 5.25a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0zM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632z"
+              />
             </svg>
             <span className="text-base font-medium group-hover:underline underline-offset-2">
-              {surveyLang === 'de' ? 'Als Kurier arbeiten' : 'Work as a courier'}
+              {surveyLang === "de"
+                ? "Als Kurier arbeiten"
+                : "Work as a courier"}
             </span>
           </button>
           <p className="text-white/20 text-xs mt-1">© 2026 Bringo · Germany</p>
@@ -351,21 +420,25 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
               aria-label="Language selection"
             >
               <button
-                onClick={() => setSurveyLang('de')}
-                aria-pressed={surveyLang === 'de'}
+                onClick={() => setSurveyLang("de")}
+                aria-pressed={surveyLang === "de"}
                 aria-label="Auf Deutsch wechseln"
                 className={`px-4 py-2 rounded-full font-bold transition ${
-                  surveyLang === 'de' ? 'bg-white text-gray-900 shadow' : 'text-gray-400'
+                  surveyLang === "de"
+                    ? "bg-white text-gray-900 shadow"
+                    : "text-gray-400"
                 }`}
               >
                 🇩🇪 DE
               </button>
               <button
-                onClick={() => setSurveyLang('en')}
-                aria-pressed={surveyLang === 'en'}
+                onClick={() => setSurveyLang("en")}
+                aria-pressed={surveyLang === "en"}
                 aria-label="Switch to English"
                 className={`px-4 py-2 rounded-full font-bold transition ${
-                  surveyLang === 'en' ? 'bg-white text-gray-900 shadow' : 'text-gray-400'
+                  surveyLang === "en"
+                    ? "bg-white text-gray-900 shadow"
+                    : "text-gray-400"
                 }`}
               >
                 🇬🇧 EN
@@ -387,7 +460,14 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
               variants={{ visible: { transition: { staggerChildren: 0.12 } } }}
             >
               <motion.div
-                variants={{ hidden: { opacity: 0, y: 24 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' } } }}
+                variants={{
+                  hidden: { opacity: 0, y: 24 },
+                  visible: {
+                    opacity: 1,
+                    y: 0,
+                    transition: { duration: 0.5, ease: "easeOut" },
+                  },
+                }}
               >
                 <h1 className="font-black text-gray-900 text-3xl sm:text-4xl md:text-5xl lg:text-6xl leading-none">
                   {intro.welcome}
@@ -398,41 +478,99 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
 
               <motion.div
                 className="flex flex-wrap items-center gap-x-4 gap-y-1.5"
-                variants={{ hidden: { opacity: 0, y: 24 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' } } }}
+                variants={{
+                  hidden: { opacity: 0, y: 24 },
+                  visible: {
+                    opacity: 1,
+                    y: 0,
+                    transition: { duration: 0.5, ease: "easeOut" },
+                  },
+                }}
               >
                 <div className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-green-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.687-7.148a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0z" />
+                  <svg
+                    className="w-4 h-4 text-green-600 shrink-0"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={1.8}
+                    aria-hidden="true"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.687-7.148a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0z"
+                    />
                   </svg>
-                  <span className="text-sm font-semibold text-green-800">{intro.groceries}</span>
+                  <span className="text-sm font-semibold text-green-800">
+                    {intro.groceries}
+                  </span>
                 </div>
                 <span className="hidden sm:block w-px h-4 bg-green-200" />
                 <div className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-green-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="m21 7.5-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
+                  <svg
+                    className="w-4 h-4 text-green-600 shrink-0"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={1.8}
+                    aria-hidden="true"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="m21 7.5-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"
+                    />
                   </svg>
-                  <span className="text-sm font-semibold text-green-800">{intro.pharmacy}</span>
+                  <span className="text-sm font-semibold text-green-800">
+                    {intro.pharmacy}
+                  </span>
                 </div>
                 <span className="hidden sm:block w-px h-4 bg-green-200" />
                 <div className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-green-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0z" />
+                  <svg
+                    className="w-4 h-4 text-green-600 shrink-0"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={1.8}
+                    aria-hidden="true"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0z"
+                    />
                   </svg>
-                  <span className="text-sm font-semibold text-green-800">{intro.errands}</span>
+                  <span className="text-sm font-semibold text-green-800">
+                    {intro.errands}
+                  </span>
                 </div>
               </motion.div>
 
               <motion.div
-                variants={{ hidden: { opacity: 0, y: 24 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' } } }}
+                variants={{
+                  hidden: { opacity: 0, y: 24 },
+                  visible: {
+                    opacity: 1,
+                    y: 0,
+                    transition: { duration: 0.5, ease: "easeOut" },
+                  },
+                }}
                 className="space-y-3"
               >
                 <button
                   onClick={() => setStep(5)}
                   className="w-full py-4 rounded-xl font-semibold text-white text-sm md:text-base"
                   style={{
-                    background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
-                    boxShadow: '0 4px 16px rgba(22,163,74,0.35)',
+                    background:
+                      "linear-gradient(135deg, #16a34a 0%, #15803d 100%)",
+                    boxShadow: "0 4px 16px rgba(22,163,74,0.35)",
                   }}
                 >
                   {intro.orderBtn}
@@ -443,7 +581,9 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
                     href="/prototype"
                     className="text-xs text-gray-300 hover:text-green-600 transition-colors underline underline-offset-2"
                   >
-                    {surveyLang === 'de' ? 'Prototyp-Bericht ansehen' : 'View prototype report'}
+                    {surveyLang === "de"
+                      ? "Prototyp-Bericht ansehen"
+                      : "View prototype report"}
                   </a>
                 </div>
               </motion.div>
@@ -454,22 +594,36 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
           {step === 0 && showSurveyBanner && (
             <div
               className="fixed top-5 right-5 z-50"
-              style={{ animation: 'slideInRight 0.45s cubic-bezier(0.34,1.26,0.64,1) forwards' }}
+              style={{
+                animation:
+                  "slideInRight 0.45s cubic-bezier(0.34,1.26,0.64,1) forwards",
+              }}
             >
               <div
                 className="w-72 sm:w-80 rounded-2xl overflow-hidden"
-                style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.22)', background: 'white' }}
+                style={{
+                  boxShadow: "0 8px 40px rgba(0,0,0,0.22)",
+                  background: "white",
+                }}
               >
                 <div
                   className="px-5 pt-5 pb-2"
-                  style={{ background: 'linear-gradient(135deg,#0d3d1e,#166534)' }}
+                  style={{
+                    background: "linear-gradient(135deg,#0d3d1e,#166534)",
+                  }}
                 >
                   <div className="flex items-start justify-between gap-3 mb-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center shrink-0 text-xl">📋</div>
+                      <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center shrink-0 text-xl">
+                        📋
+                      </div>
                       <div>
-                        <p className="font-black text-white text-base leading-tight">{intro.surveyTitle}</p>
-                        <p className="text-white/60 text-xs mt-0.5">{intro.surveyMeta}</p>
+                        <p className="font-black text-white text-base leading-tight">
+                          {intro.surveyTitle}
+                        </p>
+                        <p className="text-white/60 text-xs mt-0.5">
+                          {intro.surveyMeta}
+                        </p>
                       </div>
                     </div>
                     <button
@@ -477,17 +631,33 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
                       className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 transition-colors flex items-center justify-center shrink-0 mt-0.5"
                       aria-label="Dismiss"
                     >
-                      <svg className="w-3.5 h-3.5 text-white/70" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      <svg
+                        className="w-3.5 h-3.5 text-white/70"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2.5}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M6 18L18 6M6 6l12 12"
+                        />
                       </svg>
                     </button>
                   </div>
                 </div>
                 <div className="px-5 py-4 flex items-center gap-3">
                   <button
-                    onClick={() => { setShowSurveyBanner(false); setStep(2) }}
+                    onClick={() => {
+                      setShowSurveyBanner(false);
+                      setStep(2);
+                    }}
                     className="flex-1 py-3 px-5 rounded-xl font-semibold text-sm text-white"
-                    style={{ background: 'linear-gradient(135deg,#16a34a,#15803d)', boxShadow: '0 4px 14px rgba(22,163,74,0.35)' }}
+                    style={{
+                      background: "linear-gradient(135deg,#16a34a,#15803d)",
+                      boxShadow: "0 4px 14px rgba(22,163,74,0.35)",
+                    }}
                   >
                     {intro.surveyCta}
                   </button>
@@ -505,37 +675,52 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
           {step === 2 && (
             <div className="space-y-6">
               <h2 className="text-2xl sm:text-4xl font-black text-gray-900">
-                {surveyLang === 'de' ? 'Textgröße anpassen' : 'Adjust text size'}
+                {surveyLang === "de"
+                  ? "Textgröße anpassen"
+                  : "Adjust text size"}
               </h2>
               <p className="text-gray-500 text-lg">
-                {surveyLang === 'de'
-                  ? 'Wählen Sie die Textgröße, die für Sie am angenehmsten ist.'
-                  : 'Choose the text size that feels most comfortable for you.'}
+                {surveyLang === "de"
+                  ? "Wählen Sie die Textgröße, die für Sie am angenehmsten ist."
+                  : "Choose the text size that feels most comfortable for you."}
               </p>
-              {(['normal', 'large', 'xl'] as TextSize[]).map((size) => (
+              {(["normal", "large", "xl"] as TextSize[]).map((size) => (
                 <button
                   key={size}
-                  onClick={() => { setTextSize(size); applyTextSize(size) }}
+                  onClick={() => {
+                    setTextSize(size);
+                    applyTextSize(size);
+                  }}
                   aria-pressed={textSize === size}
                   className={`w-full border rounded-2xl p-5 text-left transition ${
-                    textSize === size ? 'border-green-600 bg-green-50' : 'border-gray-200 hover:bg-green-50'
+                    textSize === size
+                      ? "border-green-600 bg-green-50"
+                      : "border-gray-200 hover:bg-green-50"
                   }`}
                 >
-                  <span className={size === 'normal' ? 'text-xl' : size === 'large' ? 'text-2xl' : 'text-3xl'}>
+                  <span
+                    className={
+                      size === "normal"
+                        ? "text-xl"
+                        : size === "large"
+                          ? "text-2xl"
+                          : "text-3xl"
+                    }
+                  >
                     Aa
                   </span>
                   <span className="ml-4 font-bold">
-                    {surveyLang === 'de'
-                      ? size === 'normal'
-                        ? 'Normal'
-                        : size === 'large'
-                        ? 'Groß'
-                        : 'Extra groß'
-                      : size === 'normal'
-                      ? 'Normal'
-                      : size === 'large'
-                      ? 'Large'
-                      : 'Extra Large'}
+                    {surveyLang === "de"
+                      ? size === "normal"
+                        ? "Normal"
+                        : size === "large"
+                          ? "Groß"
+                          : "Extra groß"
+                      : size === "normal"
+                        ? "Normal"
+                        : size === "large"
+                          ? "Large"
+                          : "Extra Large"}
                   </span>
                 </button>
               ))}
@@ -543,7 +728,7 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
                 onClick={() => setStep(3)}
                 className="w-full bg-green-600 text-white py-4 rounded-xl font-semibold"
               >
-                {surveyLang === 'de' ? 'Weiter →' : 'Continue →'}
+                {surveyLang === "de" ? "Weiter →" : "Continue →"}
               </button>
             </div>
           )}
@@ -551,27 +736,42 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
           {step === 3 && (
             <div className="space-y-6">
               <div className="flex items-center justify-between text-sm text-gray-400">
-                <span>{surveyLang === 'de' ? 'Frage' : 'Question'} {questionIndex + 1}</span>
-                <span>{questionIndex + 1} / {surveyQuestions[surveyLang].length}</span>
+                <span>
+                  {surveyLang === "de" ? "Frage" : "Question"}{" "}
+                  {questionIndex + 1}
+                </span>
+                <span>
+                  {questionIndex + 1} / {surveyQuestions[surveyLang].length}
+                </span>
               </div>
 
-              <div className="w-full bg-gray-100 rounded-full h-2" role="progressbar"
+              <div
+                className="w-full bg-gray-100 rounded-full h-2"
+                role="progressbar"
                 aria-valuenow={questionIndex + 1}
                 aria-valuemin={1}
                 aria-valuemax={surveyQuestions[surveyLang].length}
               >
                 <div
                   className="bg-green-600 h-2 rounded-full transition-all"
-                  style={{ width: `${((questionIndex + 1) / surveyQuestions[surveyLang].length) * 100}%` }}
+                  style={{
+                    width: `${((questionIndex + 1) / surveyQuestions[surveyLang].length) * 100}%`,
+                  }}
                 />
               </div>
 
               <div className="text-center space-y-3">
-                <div className="text-5xl" aria-hidden="true">{q.emoji}</div>
-                <h2 className="text-3xl font-black text-gray-900">{q.question}</h2>
+                <div className="text-5xl" aria-hidden="true">
+                  {q.emoji}
+                </div>
+                <h2 className="text-3xl font-black text-gray-900">
+                  {q.question}
+                </h2>
                 {q.multi && (
                   <p className="text-gray-400">
-                    {surveyLang === 'de' ? 'Mehrfachauswahl möglich' : 'Multiple answers allowed'}
+                    {surveyLang === "de"
+                      ? "Mehrfachauswahl möglich"
+                      : "Multiple answers allowed"}
                   </p>
                 )}
               </div>
@@ -580,7 +780,10 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
                 <div className="space-y-6">
                   <div className="text-center">
                     <p className="text-5xl font-black text-gray-900">
-                      {q.slider.unit}{(sliderValues[questionIndex] ?? q.slider.default).toFixed(q.slider.step < 1 ? 2 : 0)}
+                      {q.slider.unit}
+                      {(
+                        sliderValues[questionIndex] ?? q.slider.default
+                      ).toFixed(q.slider.step < 1 ? 2 : 0)}
                     </p>
                   </div>
                   <input
@@ -589,12 +792,23 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
                     max={q.slider.max}
                     step={q.slider.step}
                     value={sliderValues[questionIndex] ?? q.slider.default}
-                    onChange={e => setSliderValues(prev => ({ ...prev, [questionIndex]: parseFloat(e.target.value) }))}
+                    onChange={(e) =>
+                      setSliderValues((prev) => ({
+                        ...prev,
+                        [questionIndex]: parseFloat(e.target.value),
+                      }))
+                    }
                     className="w-full accent-green-600"
                   />
                   <div className="flex justify-between text-sm text-gray-400">
-                    <span>{q.slider.unit}{q.slider.min}</span>
-                    <span>{q.slider.unit}{q.slider.max}</span>
+                    <span>
+                      {q.slider.unit}
+                      {q.slider.min}
+                    </span>
+                    <span>
+                      {q.slider.unit}
+                      {q.slider.max}
+                    </span>
                   </div>
                 </div>
               ) : q.text ? (
@@ -603,12 +817,16 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
                   onChange={(e) => setComment(e.target.value)}
                   aria-label={q.question}
                   className="w-full border border-gray-200 rounded-2xl p-4 min-h-40 outline-none focus:border-green-500"
-                  placeholder={surveyLang === 'de' ? 'Schreiben Sie hier...' : 'Write your comment here...'}
+                  placeholder={
+                    surveyLang === "de"
+                      ? "Schreiben Sie hier..."
+                      : "Write your comment here..."
+                  }
                 />
               ) : (
                 <div className="space-y-3" role="group" aria-label={q.question}>
                   {q.options.map((option) => {
-                    const selected = isSelected(option)
+                    const selected = isSelected(option);
                     return (
                       <button
                         key={option}
@@ -616,74 +834,111 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
                         aria-pressed={selected}
                         className={`w-full border p-4 rounded-2xl text-left transition flex items-center gap-3 ${
                           selected
-                            ? 'bg-green-50 border-green-500 text-green-900'
-                            : 'border-gray-200 hover:bg-green-50 hover:border-green-200'
+                            ? "bg-green-50 border-green-500 text-green-900"
+                            : "border-gray-200 hover:bg-green-50 hover:border-green-200"
                         }`}
                       >
                         <span className="text-xl" aria-hidden="true">
-                          {q.multi ? (selected ? '☑️' : '☐') : selected ? '●' : '○'}
+                          {q.multi
+                            ? selected
+                              ? "☑️"
+                              : "☐"
+                            : selected
+                              ? "●"
+                              : "○"}
                         </span>
                         <span>{option}</span>
                       </button>
-                    )
+                    );
                   })}
                 </div>
               )}
 
               <div className="flex gap-3">
                 <button
-                  onClick={() => (questionIndex === 0 ? setStep(2) : setQuestionIndex(questionIndex - 1))}
+                  onClick={() =>
+                    questionIndex === 0
+                      ? setStep(2)
+                      : setQuestionIndex(questionIndex - 1)
+                  }
                   className="w-1/2 border border-gray-200 py-3 rounded-xl font-semibold"
                 >
-                  {surveyLang === 'de' ? 'Zurück' : 'Back'}
+                  {surveyLang === "de" ? "Zurück" : "Back"}
                 </button>
                 <button
                   onClick={() => {
-                    const sliderVal = q.slider ? (sliderValues[questionIndex] ?? q.slider.default) : undefined
-                    const updatedAnswers: Record<number, string | string[]> = sliderVal !== undefined
-                      ? { ...answers, [questionIndex]: `${q.slider!.unit}${sliderVal.toFixed(q.slider!.step < 1 ? 2 : 0)}` }
-                      : answers
-                    if (questionIndex === surveyQuestions[surveyLang].length - 1) {
-                      api.surveys.create({ lang: surveyLang, answers: updatedAnswers as Record<string, unknown> }).catch(console.error)
-                      logToSheets('survey', { lang: surveyLang, answers: updatedAnswers })
-                      setStep(4)
+                    const sliderVal = q.slider
+                      ? (sliderValues[questionIndex] ?? q.slider.default)
+                      : undefined;
+                    const updatedAnswers: Record<number, string | string[]> =
+                      sliderVal !== undefined
+                        ? {
+                            ...answers,
+                            [questionIndex]: `${q.slider!.unit}${sliderVal.toFixed(q.slider!.step < 1 ? 2 : 0)}`,
+                          }
+                        : answers;
+                    if (
+                      questionIndex ===
+                      surveyQuestions[surveyLang].length - 1
+                    ) {
+                      api.surveys
+                        .create({
+                          lang: surveyLang,
+                          answers: updatedAnswers as Record<string, unknown>,
+                        })
+                        .catch(console.error);
+                      logToSheets("survey", {
+                        lang: surveyLang,
+                        answers: updatedAnswers,
+                      });
+                      setStep(4);
                     } else {
-                      if (sliderVal !== undefined) setAnswers(updatedAnswers)
-                      setQuestionIndex(questionIndex + 1)
+                      if (sliderVal !== undefined) setAnswers(updatedAnswers);
+                      setQuestionIndex(questionIndex + 1);
                     }
                   }}
                   className="w-1/2 bg-green-600 text-white py-3 rounded-xl font-semibold"
                 >
-                  {surveyLang === 'de' ? 'Weiter' : 'Next'}
+                  {surveyLang === "de" ? "Weiter" : "Next"}
                 </button>
               </div>
 
-              <button onClick={() => setStep(5)} className="w-full text-green-700 underline font-medium">
-                {surveyLang === 'de' ? 'Überspringen und direkt zur Bestellung' : 'Skip and go to order'}
+              <button
+                onClick={() => setStep(5)}
+                className="w-full text-green-700 underline font-medium"
+              >
+                {surveyLang === "de"
+                  ? "Überspringen und direkt zur Bestellung"
+                  : "Skip and go to order"}
               </button>
             </div>
           )}
 
           {step === 4 && (
             <div className="text-center space-y-7">
-              <div className="text-7xl" aria-hidden="true">✅</div>
+              <div className="text-7xl" aria-hidden="true">
+                ✅
+              </div>
               <h2 className="text-3xl sm:text-5xl font-black text-gray-900">
-                {surveyLang === 'de' ? 'Vielen Dank!' : 'Thank you!'}
+                {surveyLang === "de" ? "Vielen Dank!" : "Thank you!"}
               </h2>
               <p className="text-gray-500 text-xl leading-relaxed">
-                {surveyLang === 'de'
-                  ? 'Ihr Feedback hilft uns, Bringo zu verbessern und die Bedürfnisse der Nutzer besser zu verstehen.'
-                  : 'Your feedback helps us improve Bringo and understand what users need.'}
+                {surveyLang === "de"
+                  ? "Ihr Feedback hilft uns, Bringo zu verbessern und die Bedürfnisse der Nutzer besser zu verstehen."
+                  : "Your feedback helps us improve Bringo and understand what users need."}
               </p>
               <button
                 onClick={() => setStep(5)}
                 className="w-full py-4 rounded-xl font-semibold text-white"
                 style={{
-                  background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
-                  boxShadow: '0 4px 16px rgba(22,163,74,0.35)',
+                  background:
+                    "linear-gradient(135deg, #16a34a 0%, #15803d 100%)",
+                  boxShadow: "0 4px 16px rgba(22,163,74,0.35)",
                 }}
               >
-                {surveyLang === 'de' ? 'Weiter zur Bestellung →' : 'Continue to order →'}
+                {surveyLang === "de"
+                  ? "Weiter zur Bestellung →"
+                  : "Continue to order →"}
               </button>
             </div>
           )}
@@ -692,66 +947,102 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
             <div className="space-y-6 animate-fade-in-up">
               <div>
                 <h2 className="text-2xl sm:text-4xl font-black text-gray-900 mb-2">
-                  {surveyLang === 'de' ? 'Was möchten Sie?' : 'What would you like?'}
+                  {surveyLang === "de"
+                    ? "Was möchten Sie?"
+                    : "What would you like?"}
                 </h2>
                 <p className="text-gray-400 text-base">
-                  {surveyLang === 'de' ? 'Wählen Sie eine Option:' : 'Choose an option:'}
+                  {surveyLang === "de"
+                    ? "Wählen Sie eine Option:"
+                    : "Choose an option:"}
                 </p>
               </div>
 
               <button
-                onClick={() => navigate('/create-delivery', { state: { orderType: 'shopping' } })}
+                onClick={() =>
+                  navigate("/create-delivery", {
+                    state: { orderType: "shopping" },
+                  })
+                }
                 className="w-full flex items-center gap-5 border-2 rounded-2xl p-5 text-left transition-all hover:border-green-500 hover:bg-green-50 group"
-                style={{ borderColor: '#e5e7eb' }}
+                style={{ borderColor: "#e5e7eb" }}
               >
                 <div className="w-14 h-14 rounded-2xl bg-green-50 group-hover:bg-green-100 flex items-center justify-center text-3xl shrink-0 transition-colors">
                   🛒
                 </div>
                 <div className="flex-1">
                   <p className="font-black text-gray-900 text-lg leading-tight group-hover:text-green-700 transition-colors">
-                    {surveyLang === 'de' ? 'Einkaufen & Liefern' : 'Shopping + Delivery'}
+                    {surveyLang === "de"
+                      ? "Einkaufen & Liefern"
+                      : "Shopping + Delivery"}
                   </p>
                   <p className="text-gray-400 text-sm mt-0.5">
-                    {surveyLang === 'de'
-                      ? 'Lebensmittel, Apotheke, Restaurant & mehr'
-                      : 'Groceries, pharmacy, restaurant & more'}
+                    {surveyLang === "de"
+                      ? "Lebensmittel, Apotheke, Restaurant & mehr"
+                      : "Groceries, pharmacy, restaurant & more"}
                   </p>
                 </div>
-                <svg className="w-5 h-5 text-gray-300 group-hover:text-green-500 transition-colors shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                <svg
+                  className="w-5 h-5 text-gray-300 group-hover:text-green-500 transition-colors shrink-0"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2.5}
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"
+                  />
                 </svg>
               </button>
 
               <button
-                onClick={() => navigate('/create-delivery', { state: { orderType: 'delivery' } })}
+                onClick={() =>
+                  navigate("/create-delivery", {
+                    state: { orderType: "delivery" },
+                  })
+                }
                 className="w-full flex items-center gap-5 border-2 rounded-2xl p-5 text-left transition-all hover:border-green-500 hover:bg-green-50 group"
-                style={{ borderColor: '#e5e7eb' }}
+                style={{ borderColor: "#e5e7eb" }}
               >
                 <div className="w-14 h-14 rounded-2xl bg-green-50 group-hover:bg-green-100 flex items-center justify-center text-3xl shrink-0 transition-colors">
                   📦
                 </div>
                 <div className="flex-1">
                   <p className="font-black text-gray-900 text-lg leading-tight group-hover:text-green-700 transition-colors">
-                    {surveyLang === 'de' ? 'Nur Liefern' : 'Delivery'}
+                    {surveyLang === "de" ? "Nur Liefern" : "Delivery"}
                   </p>
                   <p className="text-gray-400 text-sm mt-0.5">
-                    {surveyLang === 'de'
-                      ? 'Pakete, Dokumente, persönliche Gegenstände'
-                      : 'Packages, documents, personal items'}
+                    {surveyLang === "de"
+                      ? "Pakete, Dokumente, persönliche Gegenstände"
+                      : "Packages, documents, personal items"}
                   </p>
                 </div>
-                <svg className="w-5 h-5 text-gray-300 group-hover:text-green-500 transition-colors shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                <svg
+                  className="w-5 h-5 text-gray-300 group-hover:text-green-500 transition-colors shrink-0"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2.5}
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"
+                  />
                 </svg>
               </button>
 
               <p className="text-center text-sm text-gray-400 pt-1">
-                {surveyLang === 'de' ? 'Oder mit unserem ' : 'Or use our '}
+                {surveyLang === "de" ? "Oder mit unserem " : "Or use our "}
                 <button
-                  onClick={() => navigate('/easy-order')}
+                  onClick={() => navigate("/easy-order")}
                   className="text-green-600 hover:text-green-700 hover:underline transition-colors font-medium"
                 >
-                  {surveyLang === 'de' ? 'KI-Assistenten' : 'AI assistant'}
+                  {surveyLang === "de" ? "KI-Assistenten" : "AI assistant"}
                 </button>
               </p>
             </div>
@@ -759,23 +1050,25 @@ function OnboardingFlow({ onLogin }: { onFinish?: () => void; onLogin: () => voi
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 export default function LoginPage() {
-  const [showOnboarding, setShowOnboarding] = useState(true)
-  const navigate = useNavigate()
+  const [showOnboarding, setShowOnboarding] = useState(true);
+  const navigate = useNavigate();
 
-  useEffect(() => { clearSession() }, [])
+  useEffect(() => {
+    clearSession();
+  }, []);
 
   if (showOnboarding) {
     return (
       <OnboardingFlow
-        onFinish={() => navigate('/create-delivery')}
+        onFinish={() => navigate("/create-delivery")}
         onLogin={() => setShowOnboarding(false)}
       />
-    )
+    );
   }
 
-  return <ComingSoonSheet onBack={() => setShowOnboarding(true)} />
+  return <ComingSoonSheet onBack={() => setShowOnboarding(true)} />;
 }
