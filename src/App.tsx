@@ -2,6 +2,7 @@ import { Routes, Route, useLocation, useNavigate } from 'react-router-dom'
 import { useEffect } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import PageTransition from './components/PageTransition'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { getSession } from './lib/session'
 import { getTextSize, applyTextSize } from './lib/textSize'
 import TextSizeToggle from './components/TextSizeToggle'
@@ -92,9 +93,9 @@ export default function App() {
   }, [])
 
   return (
-    <>
+    <ErrorBoundary>
       <AnimatedRoutes />
       <TextSizeToggle />
-    </>
+    </ErrorBoundary>
   )
 }

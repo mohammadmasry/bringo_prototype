@@ -306,7 +306,7 @@ export default function CreateDeliveryPage() {
   const [dropoffCoords, setDropoffCoords] = useState<Coords | null>(null)
   const [size, setSize] = useState<'S' | 'M' | 'L'>(prefill?.size ?? 'M')
   const [stores, setStores] = useState<1 | 2 | 3>(1)
-  const [itemRange, setItemRange] = useState<ItemRange>('1-5')
+  const itemRange: ItemRange = '1-5'
   const [note, setNote] = useState('')
   const [scheduleType, setScheduleType] = useState<'now' | 'later' | 'express'>('later')
   const [calendarDay, setCalendarDay] = useState<string>(() => new Date().toISOString().split('T')[0])
@@ -689,20 +689,6 @@ export default function CreateDeliveryPage() {
                   {n === 3 ? '3+' : n}
                   <span className="block text-xs font-normal mt-0.5" style={{ color: stores === n ? '#16a34a' : '#9ca3af' }}>
                     {n === 1 ? t.store1 : n === 2 ? t.store2 : t.store3}
-                  </span>
-                </button>
-              ))}
-            </div>
-
-            <p className="text-sm font-semibold text-gray-700 mb-3">{t.itemsLabel}</p>
-            <div className="flex gap-2 mb-5">
-              {(['1-5', '6-15', '16+'] as const).map(range => (
-                <button key={range} onClick={() => setItemRange(range)}
-                  className="flex-1 py-3 rounded-xl border-2 text-sm font-bold transition-all"
-                  style={{ borderColor: itemRange === range ? '#16a34a' : '#e5e7eb', background: itemRange === range ? '#f0fdf4' : 'white', color: itemRange === range ? '#15803d' : '#374151' }}>
-                  {range}
-                  <span className="block text-xs font-normal mt-0.5" style={{ color: itemRange === range ? '#16a34a' : '#9ca3af' }}>
-                    {range === '1-5' ? t.itemsFew : range === '6-15' ? t.itemsMed : t.itemsMany}
                   </span>
                 </button>
               ))}
